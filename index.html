@@ -1,169 +1,190 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Electric Scooter Rentals</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Open+Sans:wght@300;400&display=swap" rel="stylesheet">
-<style>
-body {
-    font-family: 'Roboto', sans-serif;
-    color: #333;
-    background-color: #f5f5f5;
-    margin: 0;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-}
-.container {
-    text-align: center;
-    width: 100%;
-    max-width: 600px;
-    background-color: #ffffff;
-    padding: 40px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 10px 20px rgba(0, 0, 0, 0.05);
-}
-.logo {
-    width: 150px;
-    margin-bottom: 16px;
-}
-h1 {
-    font-family: 'Open Sans', sans-serif;
-    margin: 10px 0;
-    font-size: 1.8rem;
-    background: -webkit-linear-gradient(to right, #00B4DB, #0083B0);
-    background: linear-gradient(to right, #00B4DB, #0083B0);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.slogans {
-    font-family: 'Open Sans', sans-serif;
-    font-weight: 300;
-    font-size: 1.1rem;
-    height: 4.5em; 
-    position: relative;
-    color: #4A90E2;
-    margin: 10px 0;
-    perspective: 500px;
-}
-.slogan {
-    position: absolute;
-    width: 100%;
-    opacity: 0;
-    transition: opacity 2s, transform 2s;
-    transform: translateZ(-200px);
-    will-change: transform, opacity;
-}
-.slogan.active {
-    opacity: 1;
-    transform: translateZ(0px);
-}
-.price {
-    margin: 20px 0;
-    font-size: 20px;
-    color: #555;
-    transition: color 0.3s, transform 0.3s;
-    cursor: default;
-}
-.price:hover {
-    color: #007BFF;
-    transform: scale(1.1);
-    font-weight: 700;
-}
-.social-icons {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 20px;
-}
-.social-icon {
-    fill: #333;
-    margin: 0 12px;
-    height: 40px;
-    width: 40px;
-    transition: fill 0.3s, transform 0.3s;
-    cursor: pointer;
-}
-.social-icon:hover, .social-icon:focus {
-    fill: #007BFF;
-    transform: scale(1.1);
-}
-.registered {
-    text-align: center;
-    font-size: 0.8rem;
-    margin-top: 40px;
-}
-.btn {
-    background-color: #007BFF;
-    background-image: linear-gradient(45deg, #007BFF 0%, #0041C4 100%);
-    color: #ffffff;
-    padding: 12px 24px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 18px;
-    transition: all 0.3s ease;
-    display: inline-block;
-    text-decoration: none;
-    margin-top: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transform: translateY(0);
-}
-.btn:hover, .btn:focus {
-    background-image: linear-gradient(45deg, #0062cc 0%, #0032a0 100%);
-    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-2px);
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Scooter GoElectric</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100%;
+            padding-top: 20px;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px; /* Ensure space between logo and list */
+        }
+
+        #scooterList {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 90%;
+        }
+
+        .scooter {
+            margin-bottom: 10px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            color: white;
+            background-color: #007BFF; /* More visible color */
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        #endOfDayButton {
+            margin-top: 20px; /* Space from list */
+            font-weight: bold;
+        }
+
+        .available {
+            background-color: #4CAF50; /* Green */
+        }
+
+        .rented {
+            background-color: #f44336; /* Red */
+        }
+
+        .unlock {
+            background-color: #f9a825; /* Yellow */
+            color: black;
+        }
+
+        .button:hover {
+            transform: scale(1.05);
+        }
+
+        #footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #666;
+            animation: fadeInOut 10s infinite;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-    <img src="logo.png" alt="Company Logo" class="logo">
-    <div class="slogans">
-        <div class="slogan">Travel safe, travel green: Tenerife awaits you</div>
-        <div class="slogan">Explore with confidence, live green: Tenerife in a new light</div>
-        <div class="slogan">On the roads of Tenerife, your safety meets nature</div>
-        <div class="slogan">Discover Tenerife at the best price, without compromising on safety and sustainability</div>
+    <img src="logo.png" class="logo" alt="GoElectric Logo">
+    <div id="scooterList"></div>
+    <button id="endOfDayButton" class="button">Fine Giornata</button>
+    <div id="footer">
+        Script by MichaleldettoDamianodettoFabrizio &reg;
     </div>
-    <h1>Electric Scooter Rentals</h1>
-    <div class="price">1 day: €40</div>
-    <div class="price">2 days: €60</div>
-    <div class="price">3 days: €80</div>
-    <div class="price">4 days: €110</div>
-    <div class="price">5 days: €120</div>
-    <div class="price">6 days: €130</div>
-    <div class="price">7 days: €140</div>
-    <div class="price">for each extra day: €15</div>
-    <a href="https://forms.gle/vjmewSa7hGm22qre8" class="btn">Book Now</a>
-    <div class="social-icons">
-        <a href="https://www.facebook.com" target="_blank" aria-label="Facebook">
-            <svg class="social-icon" viewBox="0 0 24 24"><path d="M22.675 0H1.325C.594 0 0 .594 0 1.325v21.35C0 23.406.594 24 1.325 24h11.55v-9.3h-3.1V11.1h3.1V8.2c0-3.1 1.9-4.775 4.675-4.775 1.325 0 2.465.1 2.8.15v3.25h-1.925c-1.5 0-1.8.713-1.8 1.775v2.325h3.6l-.475 3.6h-3.125V24h6.1c.731 0 1.325-.594 1.325-1.325V1.325C24 .594 23.406 0 22.675 0z"/></svg>
-        </a>
-        <a href="https://www.instagram.com" target="_blank" aria-label="Instagram">
-            <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M7.75 2h8.5C19.55 2 21 3.45 21 5.25v8.5c0 1.8-1.45 3.25-3.25 3.25h-8.5C4.45 17 3 15.55 3 13.75v-8.5C3 3.45 4.45 2 6.25 2zm10.5.75a.75.75 0 0 0-.75-.75h-8.5a.75.75 0 0 0-.75.75v8.5c0 .41.34.75.75.75h8.5a.75.75 0 0 0 .75-.75v-8.5zm-2.75 1a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5zM12 5.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zm0 1.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
-            </svg>
-                    </a>
-    </div>
-    <div class="registered">© MichaeldettoDamiano</div>
-</div>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    let slogans = document.querySelectorAll('.slogan');
-    let currentSlogan = 0;
-    slogans[currentSlogan].classList.add('active');
+    <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-database.js"></script>
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyC346gJHt-Dg7_bjzYw7k1D6j0tcalxht4",
+  authDomain: "goelectric-e9299.firebaseapp.com",
+  databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
+  projectId: "goelectric-e9299",
+  storageBucket: "goelectric-e9299.appspot.com",
+  messagingSenderId: "81618360543",
+  appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
+  measurementId: "G-6FZQSDWEZJ"
+        };
+        firebase.initializeApp(firebaseConfig);
 
-    setInterval(() => {
-        slogans[currentSlogan].classList.remove('active');
-        currentSlogan = (currentSlogan + 1) % slogans.length;
-        slogans[currentSlogan].classList.add('active');
-    }, 4000);
-});
-</script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dbRef = firebase.database().ref('scooters');
+            const dateRef = firebase.database().ref('lastPressedDate');
+            const endOfDayButton = document.getElementById('endOfDayButton');
+
+            dateRef.on('value', snapshot => {
+                const lastPressedDate = snapshot.val();
+                const today = new Date().toDateString();
+                endOfDayButton.disabled = lastPressedDate === today;
+            });
+
+            endOfDayButton.addEventListener('click', function() {
+                const today = new Date().toDateString();
+                dateRef.set(today);
+                updateDaysRemaining();
+            });
+
+            function displayScooters() {
+                dbRef.on('value', snapshot => {
+                    const data = snapshot.val();
+                    const container = document.getElementById('scooterList');
+                    container.innerHTML = '';
+                    Object.keys(data).forEach(key => {
+                        const scooter = data[key];
+                        const scooterElement = document.createElement('div');
+                        scooterElement.className = 'scooter';
+
+                        const statusButton = document.createElement('button');
+                        statusButton.className = `button ${scooter.status === 'disponibile' ? 'available' : 'rented'}`;
+                        statusButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
+                        scooterElement.appendChild(statusButton);
+
+                        if (scooter.status === 'noleggiato') {
+                            const unlockButton = document.createElement('button');
+                            unlockButton.textContent = 'Sblocca';
+                            unlockButton.className = 'button unlock';
+                            unlockButton.onclick = () => unlockScooter(key, scooter);
+                            scooterElement.appendChild(unlockButton);
+                        } else {
+                            statusButton.onclick = () => rentScooter(key, scooter);
+                        }
+
+                        container.appendChild(scooterElement);
+                    });
+                });
+            }
+
+            function updateDaysRemaining() {
+                dbRef.once('value', snapshot => {
+                    snapshot.forEach(childSnapshot => {
+                        const scooter = childSnapshot.val();
+                        if (scooter.status === 'noleggiato' && scooter.daysRemaining > 0) {
+                            const newDaysRemaining = scooter.daysRemaining - 1;
+                            childSnapshot.ref.update({
+                                daysRemaining: newDaysRemaining
+                            });
+                        }
+                    });
+                });
+            }
+
+            function rentScooter(key, scooter) {
+                const days = prompt("Per quanti giorni sarà noleggiato lo scooter?");
+                if (days && !isNaN(days)) {
+                    dbRef.child(key).update({
+                        status: 'noleggiato',
+                        daysRemaining: parseInt(days, 10)
+                    });
+                }
+            }
+
+            function unlockScooter(key, scooter) {
+                dbRef.child(key).update({
+                    status: 'disponibile',
+                    daysRemaining: 0
+                });
+            }
+
+            displayScooters();
+        });
+    </script>
 </body>
 </html>
