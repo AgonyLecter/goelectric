@@ -81,12 +81,20 @@
             0%, 100% { opacity: 0; }
             50% { opacity: 1; }
         }
+
+        #statusMessage, #countdown {
+            margin-top: 10px;
+            color: #333;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <img src="logo.png" class="logo" alt="GoElectric Logo">
     <div id="scooterList"></div>
     <button id="endOfDayButton" class="button">Fine Giornata</button>
+    <div id="statusMessage"></div>
+    <div id="countdown"></div>
     <div id="footer">
         Script by MichaleldettoDamianodettoFabrizio &reg;
     </div>
@@ -106,21 +114,52 @@
         firebase.initializeApp(firebaseConfig);
 
         document.addEventListener('DOMContentLoaded', function() {
-            const dbRef = firebase.database().ref('scooters');
-            const dateRef = firebase.database().ref('lastPressedDate');
-            const endOfDayButton = document.getElementById('endOfDayButton');
+    const dbRef = firebase.database().ref('scooters');
+    const dateRef = firebase.database().ref('lastPressedDate');
+    const endOfDayButton = document.getElementById('endOfDayButton');
+    const statusMessage = document.getElementById('statusMessage');
+    const countdown = document.getElementById('countdown');
 
-            dateRef.on('value', snapshot => {
-                const lastPressedDate = snapshot.val();
-                const today = new Date().toDateString();
-                endOfDayButton.disabled = lastPressedDate === today;
-            });
+    function updateStatus(lastPressed) {
+        if (lastPressed) {
+            const lastPressedDate = new Date(lastPressed); // Converte il timestamp in un oggetto Date
+            statusMessage.textContent = `Ultimo aggiornamento: ${lastPressedDate.toLocaleString()}`;
+        } else {
+            statusMessage.textContent = "Nessun aggiornamento effettuato ancora oggi.";
+        }
+    }
 
-            endOfDayButton.addEventListener('click', function() {
-                const today = new Date().toDateString();
-                dateRef.set(today);
-                updateDaysRemaining();
-            });
+    function updateCountdown() {
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const msLeft = tomorrow - now;
+        const hours = Math.floor(msLeft / 1000 / 60 / 60);
+        const minutes = Math.floor((msLeft / 1000 / 60) % 60);
+        countdown.textContent = `Disponibile tra: ${hours} ore e ${minutes} minuti`;
+        setTimeout(updateCountdown, 60000); // Aggiorna ogni minuto
+    }
+
+    dateRef.on('value', snapshot => {
+        const lastPressedDate = snapshot.val();
+        const today = new Date().toDateString();
+        const lastPressed = new Date(lastPressedDate);
+        endOfDayButton.disabled = lastPressed.toDateString() === today;
+        updateStatus(lastPressedDate);
+        if (endOfDayButton.disabled) {
+            updateCountdown();
+        } else {
+            countdown.textContent = "";
+        }
+    });
+
+    endOfDayButton.addEventListener('click', function() {
+        const now = new Date();
+        dateRef.set(now.toJSON()); // Salva l'orario corrente come JSON
+        updateDaysRemaining();
+        updateStatus(now.toJSON());
+        updateCountdown();
+    });
+
 
             function displayScooters() {
                 dbRef.on('value', snapshot => {
