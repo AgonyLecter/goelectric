@@ -4,203 +4,226 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Scooter GoElectric</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background-color: #f4f4f4;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100%;
             padding-top: 20px;
         }
+
         .logo {
             width: 150px;
             height: auto;
-            margin-bottom: 20px;
+            margin-bottom: 20px; /* Ensure space between logo and list */
         }
-        #currentDateTime {
-            font-size: 18px;
-            margin-bottom: 20px;
+
+        #scooterList {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 90%;
         }
-        .scooter-btn, .manage-btn, .unlock-btn {
-            width: 100%;
-            margin: 5px 0;
+
+        .scooter {
+            margin-bottom: 10px;
         }
-        .btn-success {
-            background-color: #28a745; /* Brighter green */
+
+        .button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            color: white;
+            background-color: #007BFF; /* More visible color */
+            cursor: pointer;
+            transition: transform 0.3s ease;
         }
-        .return-today {
-            background-color: #ffc107; /* Brighter yellow */
+
+        #endOfDayButton {
+            margin-top: 20px; /* Space from list */
+            font-weight: bold;
         }
-        .btn-danger {
-            background-color: #dc3545; /* Brighter red */
+
+        .available {
+            background-color: #4CAF50; /* Green */
         }
-        .out-of-service {
-            background-color: #6c757d; /* Consistent gray */
+
+        .rented {
+            background-color: #f44336; /* Red */
         }
-        .modal-content {
-            font-family: 'Roboto', sans-serif;
+
+        .unlock {
+            background-color: #f9a825; /* Yellow */
+            color: black;
+        }
+
+        .button:hover {
+            transform: scale(1.05);
+        }
+
+        #footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #9dffff;
+            animation: fadeInOut 10s infinite;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        #statusMessage, #countdown {
+            margin-top: 10px;
+            color: #333;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <div class="container d-flex flex-column align-items-center">
-        <img src="logo.png" class="logo mb-3" alt="GoElectric Logo">
-        <div id="navMenu" class="mb-3">
-            <a href="reservations.html" class="btn btn-primary">Reservations</a>
-        </div>
-        <div id="currentDateTime"></div>
-        <div id="scooterList" class="w-100 row"></div>
-        <div id="footer" class="mt-3 text-secondary">
-           &reg; Script by MichaeldettoDamianodettoFabrizio
-        </div>
-    </div>
-    <div class="modal" tabindex="-1" role="dialog" id="manageScooterModal">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Gestisci Scooter</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input id="daysInput" type="number" class="form-control" min="1" value="2">
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="returnToday">
-                        <label class="form-check-label" for="returnToday">Rientra oggi</label>
-                    </div>
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="outOfService">
-                        <label class="form-check-label" for="outOfService">Non disponibile</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" onclick="submitManage()">Conferma</button>
-                </div>
-            </div>
-        </div>
+    <img src="logo.png" class="logo" alt="GoElectric Logo">
+    <div id="scooterList"></div>
+    <button id="endOfDayButton" class="button">Fine Giornata</button>
+    <div id="statusMessage"></div>
+    <div id="countdown"></div>
+    <div id="footer">
+        Script by MichaeldettoDamianodettoFabrizio &reg;
     </div>
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-database.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         var firebaseConfig = {
             apiKey: "AIzaSyC346gJHt-Dg7_bjzYw7k1D6j0tcalxht4",
-            authDomain: "goelectric-e9299.firebaseapp.com",
-            databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
-            projectId: "goelectric-e9299",
-            storageBucket: "goelectric-e9299.appspot.com",
-            messagingSenderId: "81618360543",
-            appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
-            measurementId: "G-6FZQSDWEZJ"
+  authDomain: "goelectric-e9299.firebaseapp.com",
+  databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
+  projectId: "goelectric-e9299",
+  storageBucket: "goelectric-e9299.appspot.com",
+  messagingSenderId: "81618360543",
+  appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
+  measurementId: "G-6FZQSDWEZJ"
         };
         firebase.initializeApp(firebaseConfig);
 
-        const dbRef = firebase.database().ref('scooters');
-        let currentScooterKey;
-
         document.addEventListener('DOMContentLoaded', function() {
-            setInterval(updateDateTime, 1000);  // Update the current time every second
-            scheduleMidnightUpdate();  // Schedule the daily update
+    const dbRef = firebase.database().ref('scooters');
+    const dateRef = firebase.database().ref('lastPressedDate');
+    const endOfDayButton = document.getElementById('endOfDayButton');
+    const statusMessage = document.getElementById('statusMessage');
+    const countdown = document.getElementById('countdown');
 
-            dbRef.on('value', snapshot => {
-                const data = snapshot.val();
-                const container = document.getElementById('scooterList');
-                container.innerHTML = '';
-                Object.keys(data).sort((a, b) => a - b).forEach(key => {
-                    const scooter = data[key];
-                    const scooterElement = document.createElement('div');
-                    scooterElement.className = 'col-md-4 col-sm-6';
+    function updateStatus(lastPressed) {
+        if (lastPressed) {
+            const lastPressedDate = new Date(lastPressed); // Converte il timestamp in un oggetto Date
+            statusMessage.textContent = `Ultimo aggiornamento: ${lastPressedDate.toLocaleString()}`;
+        } else {
+            statusMessage.textContent = "Nessun aggiornamento effettuato ancora oggi.";
+        }
+    }
 
-                    const statusButton = document.createElement('button');
-                    statusButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-                    statusButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
+    function updateCountdown() {
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const msLeft = tomorrow - now;
+        const hours = Math.floor(msLeft / 1000 / 60 / 60);
+        const minutes = Math.floor((msLeft / 1000 / 60) % 60);
+        countdown.textContent = `Disponibile tra: ${hours} ore e ${minutes} minuti`;
+        setTimeout(updateCountdown, 60000); // Aggiorna ogni minuto
+    }
 
-                    const manageButton = document.createElement('button');
-                    manageButton.className = 'btn btn-info manage-btn';
-                    manageButton.textContent = 'Gestisci';
-                    manageButton.onclick = () => {
-                        currentScooterKey = key;
-                        showManageModal(scooter);
-                    };
+    dateRef.on('value', snapshot => {
+        const lastPressedDate = snapshot.val();
+        const today = new Date().toDateString();
+        const lastPressed = new Date(lastPressedDate);
+        endOfDayButton.disabled = lastPressed.toDateString() === today;
+        updateStatus(lastPressedDate);
+        if (endOfDayButton.disabled) {
+            updateCountdown();
+        } else {
+            countdown.textContent = "";
+        }
+    });
 
-                    scooterElement.appendChild(statusButton);
-                    scooterElement.appendChild(manageButton);
+    endOfDayButton.addEventListener('click', function() {
+        const now = new Date();
+        dateRef.set(now.toJSON()); // Salva l'orario corrente come JSON
+        updateDaysRemaining();
+        updateStatus(now.toJSON());
+        updateCountdown();
+    });
 
-                    if (scooter.status !== 'disponibile') {
-                        const unlockButton = document.createElement('button');
-                        unlockButton.className = 'btn btn-secondary unlock-btn';
-                        unlockButton.textContent = 'Sblocca';
-                        unlockButton.onclick = () => unlockScooter(key);
-                        scooterElement.appendChild(unlockButton);
-                    }
 
-                    container.appendChild(scooterElement);
+            function displayScooters() {
+                dbRef.on('value', snapshot => {
+                    const data = snapshot.val();
+                    const container = document.getElementById('scooterList');
+                    container.innerHTML = '';
+                    Object.keys(data).forEach(key => {
+                        const scooter = data[key];
+                        const scooterElement = document.createElement('div');
+                        scooterElement.className = 'scooter';
+
+                        const statusButton = document.createElement('button');
+                        statusButton.className = `button ${scooter.status === 'disponibile' ? 'available' : 'rented'}`;
+                        statusButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
+                        scooterElement.appendChild(statusButton);
+
+                        if (scooter.status === 'noleggiato') {
+                            const unlockButton = document.createElement('button');
+                            unlockButton.textContent = 'Sblocca';
+                            unlockButton.className = 'button unlock';
+                            unlockButton.onclick = () => unlockScooter(key, scooter);
+                            scooterElement.appendChild(unlockButton);
+                        } else {
+                            statusButton.onclick = () => rentScooter(key, scooter);
+                        }
+
+                        container.appendChild(scooterElement);
+                    });
                 });
-            });
-        });
-
-        function updateDateTime() {
-            const now = new Date();
-            document.getElementById('currentDateTime').textContent = now.toLocaleTimeString();
-        }
-
-        function scheduleMidnightUpdate() {
-            const now = new Date();
-            const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
-            setTimeout(() => {
-                dailyUpdate();
-                scheduleMidnightUpdate();
-            }, msUntilMidnight);
-        }
-
-        function dailyUpdate() {
-            dbRef.once('value', snapshot => {
-                snapshot.forEach(child => {
-                    const scooter = child.val();
-                    if (scooter.daysRemaining > 0) {
-                        dbRef.child(child.key).update({ daysRemaining: scooter.daysRemaining - 1 });
-                    } else if (scooter.daysRemaining === 0 && scooter.status !== 'disponibile') {
-                        dbRef.child(child.key).update({ status: 'disponibile' });
-                    }
-                });
-            });
-        }
-
-        function showManageModal(scooter) {
-            document.getElementById('daysInput').value = scooter.daysRemaining || 2;
-            document.getElementById('returnToday').checked = scooter.status === 'rientra_oggi';
-            document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
-            const manageModal = new bootstrap.Modal(document.getElementById('manageScooterModal'));
-            manageModal.show();
-        }
-
-        function submitManage() {
-            const daysInput = document.getElementById('daysInput');
-            const days = parseInt(daysInput.value, 10);
-            const returnToday = document.getElementById('returnToday').checked;
-            const outOfService = document.getElementById('outOfService').checked;
-            const updateObj = {
-                status: outOfService ? 'non_disponibile' : returnToday ? 'rientra_oggi' : 'noleggiato',
-                daysRemaining: returnToday || outOfService ? 0 : days
-            };
-            dbRef.child(currentScooterKey).update(updateObj).then(() => {
-                const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
-                manageModal.hide();
-            });
-        }
-
-        function unlockScooter(key) {
-            dbRef.child(key).update({
-                status: 'disponibile',
-                daysRemaining: 0
-            });
-        }
-
-        function getButtonClass(status) {
-            switch(status) {
-                case 'disponibile': return 'btn-success';
-                case 'rientra_oggi': return 'return-today';
-                case 'non_disponibile': return 'out-of-service';
-                default: return 'btn-danger';
             }
-        }
+
+            function updateDaysRemaining() {
+                dbRef.once('value', snapshot => {
+                    snapshot.forEach(childSnapshot => {
+                        const scooter = childSnapshot.val();
+                        if (scooter.status === 'noleggiato' && scooter.daysRemaining > 0) {
+                            const newDaysRemaining = scooter.daysRemaining - 1;
+                            childSnapshot.ref.update({
+                                daysRemaining: newDaysRemaining
+                            });
+                        }
+                    });
+                });
+            }
+
+            function rentScooter(key, scooter) {
+                const days = prompt("Per quanti giorni sarà noleggiato lo scooter?");
+                if (days && !isNaN(days)) {
+                    dbRef.child(key).update({
+                        status: 'noleggiato',
+                        daysRemaining: parseInt(days, 10)
+                    });
+                }
+            }
+
+            function unlockScooter(key, scooter) {
+                dbRef.child(key).update({
+                    status: 'disponibile',
+                    daysRemaining: 0
+                });
+            }
+
+            displayScooters();
+        });
     </script>
 </body>
 </html>
