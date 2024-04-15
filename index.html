@@ -38,6 +38,11 @@
         .modal-content {
             font-family: 'Roboto', sans-serif;
         }
+        #notifications {
+            font-size: 16px;
+            color: #ff0000;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -47,11 +52,14 @@
             <a href="reservations.html" class="btn btn-primary">Reservations</a>
         </div>
         <div id="currentDateTime"></div>
+        <div id="notifications"></div>
         <div id="scooterList" class="w-100 row"></div>
         <div id="footer" class="mt-3 text-secondary">
             Script by MichaleldettoDamianodettoFabrizio &reg;
         </div>
     </div>
+
+    <!-- Modal for managing scooters -->
     <div class="modal" tabindex="-1" role="dialog" id="manageScooterModal">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -76,29 +84,57 @@
             </div>
         </div>
     </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         var firebaseConfig = {
             apiKey: "AIzaSyC346gJHt-Dg7_bjzYw7k1D6j0tcalxht4",
-            authDomain: "goelectric-e9299.firebaseapp.com",
-            databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
-            projectId: "goelectric-e9299",
-            storageBucket: "goelectric-e9299.appspot.com",
-            messagingSenderId: "81618360543",
-            appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
-            measurementId: "G-6FZQSDWEZJ"
+  authDomain: "goelectric-e9299.firebaseapp.com",
+  databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
+  projectId: "goelectric-e9299",
+  storageBucket: "goelectric-e9299.appspot.com",
+  messagingSenderId: "81618360543",
+  appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
+  measurementId: "G-6FZQSDWEZJ"
         };
         firebase.initializeApp(firebaseConfig);
 
         const dbRef = firebase.database().ref('scooters');
+        const reservationsRef = firebase.database().ref('reservations');
         let currentScooterKey;
 
         document.addEventListener('DOMContentLoaded', function() {
-            setInterval(updateDateTime, 1000);  // Update the current time every second
-            scheduleMidnightUpdate();  // Schedule the daily update
+            setInterval(updateDateTime, 1000); // Update the current time every second
+            checkTodayReservations(); // Check for today's reservations
+            loadScooters();
+        });
 
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDateTime').textContent = now.toLocaleString('it-IT', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        function checkTodayReservations() {
+            const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            reservationsRef.orderByChild('date').equalTo(today).on('value', snapshot => {
+                const reservations = snapshot.val();
+                if (reservations) {
+                    let messages = "Prenotazioni per oggi:";
+                    for (let key in reservations) {
+                        messages += `\n${reservations[key].customerName} - ${reservations[key].date}`;
+                    }
+                    document.getElementById('notifications').textContent = messages;
+                } else {
+                    document.getElementById('notifications').textContent = "Nessuna prenotazione per oggi.";
+                }
+            });
+        }
+
+        function loadScooters() {
             dbRef.on('value', snapshot => {
                 const data = snapshot.val();
                 const container = document.getElementById('scooterList');
@@ -132,59 +168,6 @@
                     }
 
                     container.appendChild(scooterElement);
-                });
-            });
-        });
-
-        function updateDateTime() {
-    const now = new Date();
-    document.getElementById('currentDateTime').textContent = now.toLocaleString('it-IT', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
-}
-// All'inizio del tuo script, dopo l'inizializzazione di Firebase
-const reservationsRef = firebase.database().ref('reservations');
-
-function checkTodayReservations() {
-    const today = new Date().toISOString().slice(0, 10); // Formato YYYY-MM-DD
-    reservationsRef.orderByChild('date').equalTo(today).once('value', snapshot => {
-        const reservations = snapshot.val();
-        if (reservations) {
-            let messages = "Prenotazioni per oggi:";
-            for (let key in reservations) {
-                messages += `\n${reservations[key].customerName} - ${reservations[key].date}`;
-            }
-            alert(messages);
-        }
-    });
-}
-
-// Questa funzione dovrebbe essere chiamata una volta al giorno, idealmente all'avvio della pagina
-document.addEventListener('DOMContentLoaded', function() {
-    checkTodayReservations();
-    setInterval(updateDateTime, 1000);
-    scheduleMidnightUpdate();
-});
-
-
-        function scheduleMidnightUpdate() {
-            const now = new Date();
-            const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
-            setTimeout(() => {
-                dailyUpdate();
-                scheduleMidnightUpdate();
-            }, msUntilMidnight);
-        }
-
-        function dailyUpdate() {
-            dbRef.once('value', snapshot => {
-                snapshot.forEach(child => {
-                    const scooter = child.val();
-                    if (scooter.daysRemaining > 0) {
-                        dbRef.child(child.key).update({ daysRemaining: scooter.daysRemaining - 1 });
-                    } else if (scooter.daysRemaining === 0 && scooter.status !== 'disponibile') {
-                        dbRef.child(child.key).update({ status: 'disponibile' });
-                    }
                 });
             });
         }
