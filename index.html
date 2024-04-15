@@ -23,7 +23,10 @@
             margin: 5px 0;
         }
         .return-today {
-            background-color: #f0ad4e; /* Bootstrap warning color for special attention */
+            background-color: #f0ad4e; /* Special attention color */
+        }
+        .out-of-service {
+            background-color: #6c757d; /* Out of service color */
         }
     </style>
 </head>
@@ -38,24 +41,28 @@
         <div id="statusMessage" class="mt-3"></div>
         <div id="countdown" class="mt-1"></div>
         <div id="footer" class="mt-3 text-secondary">
-            &reg; Script by MichaeldettoDamianodettoFabrizio
+          &reg;  Script by MichaeldettoDamianodettoFabrizio
         </div>
     </div>
     <div class="modal" tabindex="-1" role="dialog" id="daysMenuModal">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Seleziona i giorni o rientro giornaliero</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <h5 class="modal-title">Seleziona i giorni, rientro giornaliero o non disponibile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <input id="daysInput" type="number" class="form-control" min="2" value="2">
                     <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="returnToday">
+                        <input class="form-check-input" type="checkbox" id="returnToday" onchange="toggleInputs()">
                         <label class="form-check-label" for="returnToday">
                             Rientra oggi
+                        </label>
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="outOfService" onchange="toggleInputs()">
+                        <label class="form-check-label" for="outOfService">
+                            Non disponibile
                         </label>
                     </div>
                 </div>
@@ -93,18 +100,14 @@
                     scooterElement.className = 'col-md-4 col-sm-6';
                     
                     const statusButton = document.createElement('button');
-                    statusButton.className = `btn ${scooter.status === 'disponibile' ? 'btn-success' : scooter.status === 'rientra_oggi' ? 'return-today' : 'btn-danger'} scooter-btn`;
-                    statusButton.textContent = scooter.status === 'rientra_oggi' ? `${scooter.name} - Rientra Oggi` : `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
+                    statusButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+                    statusButton.textContent = getButtonText(scooter);
                     
                     const actionButton = document.createElement('button');
                     actionButton.className = 'btn btn-secondary scooter-btn';
-                    actionButton.textContent = scooter.status === 'noleggiato' || scooter.status === 'rientra_oggi' ? 'Sblocca' : 'Noleggia';
+                    actionButton.textContent = getScooterActionText(scooter.status);
                     actionButton.onclick = () => {
-                        if (scooter.status === 'noleggiato' || scooter.status === 'rientra_oggi') {
-                            unlockScooter(key);
-                        } else {
-                            showDaysMenu(key);
-                        }
+                        scooterAction(key, scooter.status);
                     };
 
                     scooterElement.appendChild(statusButton);
@@ -112,6 +115,51 @@
                     container.appendChild(scooterElement);
                 });
             });
+
+            function toggleInputs() {
+                const returnTodayChecked = document.getElementById('returnToday').checked;
+                const outOfServiceChecked = document.getElementById('outOfService').checked;
+                const daysInput = document.getElementById('daysInput');
+                const otherCheckbox = returnTodayChecked ? 'outOfService' : 'returnToday';
+
+                daysInput.disabled = returnTodayChecked || outOfServiceChecked;
+                document.getElementById(otherCheckbox).disabled = returnTodayChecked || outOfServiceChecked;
+
+                if (returnTodayChecked || outOfServiceChecked) {
+                    daysInput.value = '1';
+                } else {
+                    daysInput.value = '2';
+                }
+            }
+
+            function getButtonClass(status) {
+                switch(status) {
+                    case 'disponibile': return 'btn-success';
+                    case 'rientra_oggi': return 'return-today';
+                    case 'non_disponibile': return 'out-of-service';
+                    default: return 'btn-danger';
+                }
+            }
+
+            function getButtonText(scooter) {
+                switch(scooter.status) {
+                    case 'rientra_oggi': return `${scooter.name} - Rientra Oggi`;
+                    case 'non_disponibile': return `${scooter.name} - Non Disponibile`;
+                    default: return `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
+                }
+            }
+
+            function getScooterActionText(status) {
+                return status === 'disponibile' ? 'Noleggia' : 'Sblocca';
+            }
+
+            function scooterAction(key, status) {
+                if (status === 'disponibile') {
+                    showDaysMenu(key);
+                } else {
+                    unlockScooter(key);
+                }
+            }
 
             function showDaysMenu(key) {
                 currentScooterKey = key;
@@ -123,7 +171,13 @@
                 const daysInput = document.getElementById('daysInput');
                 const days = parseInt(daysInput.value, 10);
                 const returnToday = document.getElementById('returnToday').checked;
-                if (returnToday) {
+                const outOfService = document.getElementById('outOfService').checked;
+                if (outOfService) {
+                    dbRef.child(currentScooterKey).update({
+                        status: 'non_disponibile',
+                        daysRemaining: 0
+                    });
+                } else if (returnToday) {
                     dbRef.child(currentScooterKey).update({
                         status: 'rientra_oggi',
                         daysRemaining: 1
@@ -148,3 +202,4 @@
     </script>
 </body>
 </html>
+
