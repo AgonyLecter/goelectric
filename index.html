@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Scooter GoElectric</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.0/fullcalendar.min.css" rel="stylesheet">
     <style>
         body {
             background-color: #f4f4f4;
@@ -15,34 +16,21 @@
             height: auto;
             margin-bottom: 20px;
         }
-        #currentDateTime {
+        #currentDateTime, #notifications {
             font-size: 18px;
             margin-bottom: 20px;
         }
-        .scooter-btn, .manage-btn, .unlock-btn {
+        .scooter-btn {
             width: 100%;
             margin: 5px 0;
-        }
-        .btn-success {
-            background-color: #28a745; /* Brighter green */
-        }
-        .return-today {
-            background-color: #ffc107; /* Brighter yellow */
-        }
-        .btn-danger {
-            background-color: #dc3545; /* Brighter red */
-        }
-        .out-of-service {
-            background-color: #6c757d; /* Consistent gray */
-        }
-        .modal-content {
-            font-family: 'Roboto', sans-serif;
-        }
-        #notifications {
             font-size: 16px;
-            color: #ff0000;
-            margin-top: 10px;
+            font-weight: bold;
         }
+        .btn-success { background-color: #28a745; }
+        .return-today { background-color: #ffc107; }
+        .btn-danger { background-color: #dc3545; }
+        .out-of-service { background-color: #6c757d; }
+        .modal-content { font-family: 'Roboto', sans-serif; }
     </style>
 </head>
 <body>
@@ -50,13 +38,12 @@
         <img src="logo.png" class="logo mb-3" alt="GoElectric Logo">
         <div id="navMenu" class="mb-3">
             <a href="reservations.html" class="btn btn-primary">Reservations</a>
+            <button class="btn btn-info" id="calendarButton">Calendario</button>
         </div>
         <div id="currentDateTime"></div>
         <div id="notifications"></div>
         <div id="scooterList" class="w-100 row"></div>
-        <div id="footer" class="mt-3 text-secondary">
-            Script by MichaleldettoDamianodettoFabrizio &reg;
-        </div>
+        <div id="footer" class="mt-3 text-secondary"> &reg;ScrittoMatitato&Inchiostrato by MichaeldettoDamianodettoFabrizio </div>
     </div>
 
     <!-- Modal for managing scooters -->
@@ -77,6 +64,7 @@
                         <input class="form-check-input" type="checkbox" id="outOfService">
                         <label class="form-check-label" for="outOfService">Non disponibile</label>
                     </div>
+                    <button type="button" class="btn btn-secondary mt-2" onclick="unlockScooter(currentScooterKey)">Sblocca</button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" onclick="submitManage()">Conferma</button>
@@ -85,19 +73,37 @@
         </div>
     </div>
 
+    <!-- Modal for Calendar -->
+    <div class="modal fade" id="calendarModal" tabindex="-1" role="dialog" aria-labelledby="calendarModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="calendarModalLabel">Calendario Scooter</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.0/fullcalendar.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         var firebaseConfig = {
             apiKey: "AIzaSyC346gJHt-Dg7_bjzYw7k1D6j0tcalxht4",
-  authDomain: "goelectric-e9299.firebaseapp.com",
-  databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
-  projectId: "goelectric-e9299",
-  storageBucket: "goelectric-e9299.appspot.com",
-  messagingSenderId: "81618360543",
-  appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
-  measurementId: "G-6FZQSDWEZJ"
+            authDomain: "goelectric-e9299.firebaseapp.com",
+            databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
+            projectId: "goelectric-e9299",
+            storageBucket: "goelectric-e9299.appspot.com",
+            messagingSenderId: "81618360543",
+            appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
+            measurementId: "G-6FZQSDWEZJ"
         };
         firebase.initializeApp(firebaseConfig);
 
@@ -106,9 +112,13 @@
         let currentScooterKey;
 
         document.addEventListener('DOMContentLoaded', function() {
-            setInterval(updateDateTime, 1000); // Update the current time every second
-            checkTodayReservations(); // Check for today's reservations
+            setInterval(updateDateTime, 1000);
+            checkTodayReservations();
             loadScooters();
+            initCalendar();
+            $('#calendarButton').on('click', function() {
+                $('#calendarModal').modal('show');
+            });
         });
 
         function updateDateTime() {
@@ -141,33 +151,14 @@
                 container.innerHTML = '';
                 Object.keys(data).sort((a, b) => a - b).forEach(key => {
                     const scooter = data[key];
-                    const scooterElement = document.createElement('div');
-                    scooterElement.className = 'col-md-4 col-sm-6';
-
-                    const statusButton = document.createElement('button');
-                    statusButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-                    statusButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
-
-                    const manageButton = document.createElement('button');
-                    manageButton.className = 'btn btn-info manage-btn';
-                    manageButton.textContent = 'Gestisci';
-                    manageButton.onclick = () => {
+                    const scooterButton = document.createElement('button');
+                    scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+                    scooterButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
+                    scooterButton.onclick = () => {
                         currentScooterKey = key;
                         showManageModal(scooter);
                     };
-
-                    scooterElement.appendChild(statusButton);
-                    scooterElement.appendChild(manageButton);
-
-                    if (scooter.status !== 'disponibile') {
-                        const unlockButton = document.createElement('button');
-                        unlockButton.className = 'btn btn-secondary unlock-btn';
-                        unlockButton.textContent = 'Sblocca';
-                        unlockButton.onclick = () => unlockScooter(key);
-                        scooterElement.appendChild(unlockButton);
-                    }
-
-                    container.appendChild(scooterElement);
+                    container.appendChild(scooterButton);
                 });
             });
         }
@@ -199,6 +190,10 @@
             dbRef.child(key).update({
                 status: 'disponibile',
                 daysRemaining: 0
+            }).then(() => {
+                alert('Scooter sbloccato con successo.');
+                const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
+                manageModal.hide();
             });
         }
 
@@ -208,6 +203,35 @@
                 case 'rientra_oggi': return 'return-today';
                 case 'non_disponibile': return 'out-of-service';
                 default: return 'btn-danger';
+            }
+        }
+
+        function initCalendar() {
+            $('#calendar').fullCalendar({
+                events: function(start, end, timezone, callback) {
+                    dbRef.once('value').then(snapshot => {
+                        const events = [];
+                        snapshot.forEach(child => {
+                            if (child.val().status !== 'disponibile') {
+                                events.push({
+                                    title: `${child.val().name} - ${child.val().status}`,
+                                    start: moment().add(child.val().daysRemaining, 'days'), // assuming 'daysRemaining' is the number of days from today
+                                    color: getCalendarColor(child.val().status) // Different color based on status
+                                });
+                            }
+                        });
+                        callback(events);
+                    });
+                }
+            });
+        }
+
+        function getCalendarColor(status) {
+            switch(status) {
+                case 'rientra_oggi': return '#ffc107'; // yellow
+                case 'non_disponibile': return '#6c757d'; // gray
+                case 'noleggiato': return '#dc3545'; // red
+                default: return '#28a745'; // green
             }
         }
     </script>
