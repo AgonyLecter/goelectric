@@ -36,6 +36,10 @@
                 <label for="customerName" class="form-label">Nome del Cliente:</label>
                 <input type="text" class="form-control" id="customerName" required>
             </div>
+            <div class="mb-3">
+                <label for="scooterCount" class="form-label">Numero di scooter:</label>
+                <input type="number" class="form-control" id="scooterCount" required min="1" value="1">
+            </div>
             <button type="submit" class="btn btn-primary">Conferma Prenotazione</button>
         </form>
         <div id="reservationsList" class="mt-5">
@@ -50,13 +54,13 @@
     <script>
         var firebaseConfig = {
             apiKey: "AIzaSyC346gJHt-Dg7_bjzYw7k1D6j0tcalxht4",
-  authDomain: "goelectric-e9299.firebaseapp.com",
-  databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
-  projectId: "goelectric-e9299",
-  storageBucket: "goelectric-e9299.appspot.com",
-  messagingSenderId: "81618360543",
-  appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
-  measurementId: "G-6FZQSDWEZJ"
+            authDomain: "goelectric-e9299.firebaseapp.com",
+            databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
+            projectId: "goelectric-e9299",
+            storageBucket: "goelectric-e9299.appspot.com",
+            messagingSenderId: "81618360543",
+            appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
+            measurementId: "G-6FZQSDWEZJ"
         };
         firebase.initializeApp(firebaseConfig);
         const dbRef = firebase.database().ref('reservations');
@@ -65,11 +69,13 @@
             event.preventDefault();
             const date = document.getElementById('reservationDate').value;
             const name = document.getElementById('customerName').value;
+            const count = document.getElementById('scooterCount').value;
 
             const newReservation = dbRef.push();
             newReservation.set({
                 date: date,
-                customerName: name
+                customerName: name,
+                scooterCount: count
             }, function(error) {
                 if (error) {
                     alert("La prenotazione non è stata salvata: " + error.message);
@@ -89,7 +95,7 @@
                 for (let id in reservations) {
                     const li = document.createElement('li');
                     li.className = 'list-group-item';
-                    li.textContent = `Data: ${reservations[id].date}, Cliente: ${reservations[id].customerName}`;
+                    li.textContent = `Data: ${reservations[id].date}, Cliente: ${reservations[id].customerName}, Scooter: ${reservations[id].scooterCount}`;
                     const deleteBtn = document.createElement('span');
                     deleteBtn.className = 'delete-btn';
                     deleteBtn.textContent = 'Cancella';
