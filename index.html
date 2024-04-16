@@ -128,21 +128,22 @@
             });
         }
 
-        function checkTodayReservations() {
-            const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-            reservationsRef.orderByChild('date').equalTo(today).on('value', snapshot => {
-                const reservations = snapshot.val();
-                if (reservations) {
-                    let messages = "Prenotazioni per oggi:";
-                    for (let key in reservations) {
-                        messages += `\n${reservations[key].customerName} - ${reservations[key].date}`;
-                    }
-                    document.getElementById('notifications').textContent = messages;
-                } else {
-                    document.getElementById('notifications').textContent = "Nessuna prenotazione per oggi.";
-                }
-            });
+function checkTodayReservations() {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    reservationsRef.orderByChild('date').equalTo(today).on('value', snapshot => {
+        const reservations = snapshot.val();
+        if (reservations) {
+            let messages = "Prenotazioni per oggi:";
+            for (let key in reservations) {
+                // Assumendo che 'scooterCount' sia il numero di scooter prenotati e sia salvato in ogni prenotazione
+                messages += `\n${reservations[key].customerName} - ${reservations[key].scooterCount} scooter - ${reservations[key].date}`;
+            }
+            document.getElementById('notifications').textContent = messages;
+        } else {
+            document.getElementById('notifications').textContent = "Nessuna prenotazione per oggi.";
         }
+    });
+}
 
         function loadScooters() {
             dbRef.on('value', snapshot => {
