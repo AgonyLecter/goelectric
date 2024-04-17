@@ -46,7 +46,7 @@
         <div id="footer" class="mt-3 text-secondary"> &reg;ScrittoMatitato&Inchiostrato by MichaeldettoDamianodettoFabrizio </div>
     </div>
 
-    <!-- Modal for managing scooters -->
+    <!-- Modals for managing scooters and calendar -->
     <div class="modal" tabindex="-1" role="dialog" id="manageScooterModal">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -64,7 +64,7 @@
                         <input class="form-check-input" type="checkbox" id="outOfService">
                         <label class="form-check-label" for="outOfService">Non disponibile</label>
                     </div>
-                    <button type="button" class="btn btn-secondary mt-2" onclick="unlockScooter(currentScooterKey)">Sblocca</button>
+                    <button type="button" the "btn btn-secondary mt-2" onclick="unlockScooter(currentScooterKey)">Sblocca</button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-primary" onclick="submitManage()">Conferma</button>
@@ -73,13 +73,12 @@
         </div>
     </div>
 
-    <!-- Modal for Calendar -->
     <div class="modal fade" id="calendarModal" tabindex="-1" role="dialog" aria-labelledby="calendarModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="calendarModalLabel">Calendario Scooter</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" the "btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div id="calendar"></div>
@@ -97,13 +96,13 @@
     <script>
         var firebaseConfig = {
             apiKey: "AIzaSyC346gJHt-Dg7_bjzYw7k1D6j0tcalxht4",
-            authDomain: "goelectric-e9299.firebaseapp.com",
-            databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
-            projectId: "goelectric-e9299",
-            storageBucket: "goelectric-e9299.appspot.com",
-            messagingSenderId: "81618360543",
-            appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
-            measurementId: "G-6FZQSDWEZJ"
+  authDomain: "goelectric-e9299.firebaseapp.com",
+  databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
+  projectId: "goelectric-e9299",
+  storageBucket: "goelectric-e9299.appspot.com",
+  messagingSenderId: "81618360543",
+  appId: "1:81618360543:web:67a9a4d38ec18400c1316a",
+  measurementId: "G-6FZQSDWEZJ"
         };
         firebase.initializeApp(firebaseConfig);
 
@@ -119,6 +118,7 @@
             $('#calendarButton').on('click', function() {
                 $('#calendarModal').modal('show');
             });
+            midnightUpdate();
         });
 
         function updateDateTime() {
@@ -128,22 +128,22 @@
             });
         }
 
-function checkTodayReservations() {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    reservationsRef.orderByChild('date').equalTo(today).on('value', snapshot => {
-        const reservations = snapshot.val();
-        if (reservations) {
-            let messages = "Prenotazioni per oggi:";
-            for (let key in reservations) {
-                // Assumendo che 'scooterCount' sia il numero di scooter prenotati e sia salvato in ogni prenotazione
-                messages += `\n${reservations[key].customerName} - ${reservations[key].scooterCount} scooter - ${reservations[key].date}`;
-            }
-            document.getElementById('notifications').textContent = messages;
-        } else {
-            document.getElementById('notifications').textContent = "Nessuna prenotazione per oggi.";
+        function checkTodayReservations() {
+            const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            reservationsRef.orderByChild('date').equalTo(today).on('value', snapshot => {
+                const reservations = snapshot.val();
+                if (reservations) {
+                    let messages = "Prenotazioni per oggi:";
+                    for (let key in reservations) {
+                        // Assumendo che 'scooterCount' sia il numero di scooter prenotati e sia salvato in ogni prenotazione
+                        messages += `\n${reservations[key].customerName} - ${reservations[key].scooterCount} scooter - ${reservations[key].date}`;
+                    }
+                    document.getElementById('notifications').textContent = messages;
+                } else {
+                    document.getElementById('notifications').textContent = "Nessuna prenotazione per oggi.";
+                }
+            });
         }
-    });
-}
 
         function loadScooters() {
             dbRef.on('value', snapshot => {
@@ -235,6 +235,31 @@ function checkTodayReservations() {
                 default: return '#28a745'; // green
             }
         }
+
+        function midnightUpdate() {
+            const now = new Date();
+            const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0) - now;
+            setTimeout(function() {
+                updateDaysRemaining();
+                midnightUpdate(); // Schedule the next update
+            }, msUntilMidnight);
+        }
+
+        function updateDaysRemaining() {
+    dbRef.once('value', snapshot => {
+        snapshot.forEach(child => {
+            const scooter = child.val();
+            if (scooter.daysRemaining > 0 && scooter.status !== 'non_disponibile') {
+                const newDaysRemaining = scooter.daysRemaining - 1;
+                const newStatus = newDaysRemaining === 0 ? 'disponibile' : scooter.status; // Torna verde se i giorni sono finiti
+                dbRef.child(child.key).update({
+                    daysRemaining: newDaysRemaining,
+                    status: newStatus
+                });
+            }
+        });
+    });
+}
     </script>
 </body>
 </html>
