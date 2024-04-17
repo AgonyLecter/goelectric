@@ -19,6 +19,9 @@
             color: #dc3545;
             cursor: pointer;
         }
+        #deliveryAddress {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -33,12 +36,24 @@
                 <input type="date" class="form-control" id="reservationDate" required>
             </div>
             <div class="mb-3">
+                <label for="pickupTime" class="form-label">Orario di ritiro:</label>
+                <input type="time" class="form-control" id="pickupTime" required>
+            </div>
+            <div class="mb-3">
                 <label for="customerName" class="form-label">Nome del Cliente:</label>
                 <input type="text" class="form-control" id="customerName" required>
             </div>
             <div class="mb-3">
                 <label for="scooterCount" class="form-label">Numero di scooter:</label>
                 <input type="number" class="form-control" id="scooterCount" required min="1" value="1">
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="deliveryCheck">
+                <label class="form-check-label" for="deliveryCheck">Consegna a domicilio</label>
+            </div>
+            <div class="mb-3" id="deliveryAddress">
+                <label for="address" class="form-label">Indirizzo di consegna:</label>
+                <input type="text" class="form-control" id="address">
             </div>
             <button type="submit" class="btn btn-primary">Conferma Prenotazione</button>
         </form>
@@ -68,14 +83,20 @@
         document.getElementById('reservationForm').addEventListener('submit', function(event) {
             event.preventDefault();
             const date = document.getElementById('reservationDate').value;
+            const time = document.getElementById('pickupTime').value;
             const name = document.getElementById('customerName').value;
             const count = document.getElementById('scooterCount').value;
+            const delivery = document.getElementById('deliveryCheck').checked;
+            const address = delivery ? document.getElementById('address').value : "";
 
             const newReservation = dbRef.push();
             newReservation.set({
                 date: date,
+                time: time,
                 customerName: name,
-                scooterCount: count
+                scooterCount: count,
+                delivery: delivery,
+                address: address
             }, function(error) {
                 if (error) {
                     alert("La prenotazione non è stata salvata: " + error.message);
@@ -87,6 +108,14 @@
             });
         });
 
+        document.getElementById('deliveryCheck').addEventListener('change', function() {
+            if (this.checked) {
+                document.getElementById('deliveryAddress').style.display = 'block';
+            } else {
+                document.getElementById('deliveryAddress').style.display = 'none';
+            }
+        });
+
         function loadReservations() {
             dbRef.on('value', function(snapshot) {
                 const reservations = snapshot.val();
@@ -95,7 +124,7 @@
                 for (let id in reservations) {
                     const li = document.createElement('li');
                     li.className = 'list-group-item';
-                    li.textContent = `Data: ${reservations[id].date}, Cliente: ${reservations[id].customerName}, Scooter: ${reservations[id].scooterCount}`;
+                    li.textContent = `Data: ${reservations[id].date}, Cliente: ${reservations[id].customerName}, Scooter: ${reservations[id].scooterCount}, Orario: ${reservations[id].time}, Consegna: ${reservations[id].delivery ? 'Sì, a ' + reservations[id].address : 'No'}`;
                     const deleteBtn = document.createElement('span');
                     deleteBtn.className = 'delete-btn';
                     deleteBtn.textContent = 'Cancella';
