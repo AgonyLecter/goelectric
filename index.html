@@ -239,14 +239,16 @@
         contentHeight: 'auto',
         aspectRatio: 1.35,
         events: loadEvents,
-        eventClick: function(info) {
-            if (info.event.extendedProps.details) {
-                alert('Dettagli: ' + info.event.extendedProps.details);
+        eventRender: function(event, element, view) {
+            // Adjust how events are rendered based on the view type
+            if (view.name === 'month' || view.name === 'agendaWeek') {
+                // For month and week views, show less information
+                element.find('.fc-title').text(`Scooter ${event.title}`);
+            } else {
+                // For day views, show more detailed information
+                element.find('.fc-title').html(`<strong>${event.title}</strong>`);
             }
-        },
-        eventRender: function(event, element) {
-            element.find('.fc-title').html(`<strong>${event.title}</strong>`); // Usa .html per garantire che tutto il titolo sia renderizzato correttamente
-            // Tooltip per mostrare il titolo completo al passaggio del mouse
+            // Add tooltips for all views
             $(element).tooltip({
                 title: event.title + (event.extendedProps.details ? ": " + event.extendedProps.details : ""),
                 placement: 'top'
@@ -262,32 +264,6 @@
     });
 }
 
-
-function loadEvents(start, end, timezone, callback) {
-    dbRef.once('value').then(snapshot => {
-        const events = [];
-        snapshot.forEach(child => {
-            const scooter = child.val();
-            if (scooter.status !== 'disponibile' && scooter.name) { 
-                const eventTitle = `Scooter ${scooter.name} - Ritiro: ${scooter.pickupTime || 'Non specificato'}`;
-                const description = scooter.delivery ? `Consegna a: ${scooter.deliveryAddress}` : 'Nessuna consegna';
-                events.push({
-                    title: eventTitle,
-                    start: moment().add(scooter.daysRemaining, 'days').startOf('day').toDate(),
-                    end: moment().add(scooter.daysRemaining + 1, 'days').startOf('day').toDate(),
-                    allDay: true,
-                    color: getCalendarColor(scooter.status),
-                    extendedProps: {
-                        details: description
-                    }
-                });
-            }
-        });
-        callback(events);
-    });
-}
-
-
 function initCalendar() {
     $('#calendar').fullCalendar({
         defaultView: $(window).width() < 765 ? 'agendaDay' : 'month',
@@ -300,18 +276,12 @@ function initCalendar() {
         contentHeight: 'auto',
         aspectRatio: 1.35,
         events: loadEvents,
-        eventClick: function(info) {
-            if (info.event.extendedProps.details) {
-                alert('Dettagli: ' + info.event.extendedProps.details); // Mostra dettagli solo se presenti
-            }
-        },
         eventRender: function(event, element) {
-            if (event.extendedProps.details) {
-                element.find('.fc-title').append(`<br/>${event.extendedProps.details}`); // Mostra dettagli solo se presenti
-            }
+            // Directly setting the title to just the scooter number for all views
+            element.find('.fc-title').text(event.title);
         },
         windowResize: function(view) {
-            if ($(window). width() < 765) {
+            if ($(window).width() < 765) {
                 $('#calendar').fullCalendar('changeView', 'agendaDay');
             } else {
                 $('#calendar').fullCalendar('changeView', 'month');
@@ -320,7 +290,25 @@ function initCalendar() {
     });
 }
 
-
+function loadEvents(start, end, timezone, callback) {
+    dbRef.once('value').then(snapshot => {
+        const events = [];
+        snapshot.forEach(child => {
+            const scooter = child.val();
+            if (scooter.status !== 'disponibile' && scooter.name) { 
+                // Simplified event title to only include the scooter number
+                const eventTitle = `Scooter ${scooter.name}`;
+                events.push({
+                    title: eventTitle,
+                    start: moment().add(scooter.daysRemaining, 'days').startOf('day').toDate(),
+                    allDay: true, // Ensure it's marked as an all-day event
+                    color: getCalendarColor(scooter.status)
+                });
+            }
+        });
+        callback(events);
+    });
+}
 
 function getCalendarColor(status) {
     switch(status) {
@@ -330,6 +318,7 @@ function getCalendarColor(status) {
         default: return '#28a745';
     }
 }
+
 
 
         function midnightUpdate() {
