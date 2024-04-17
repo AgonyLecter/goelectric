@@ -32,13 +32,21 @@
         .out-of-service { background-color: #6c757d; }
         .modal-content { font-family: 'Roboto', sans-serif; }
         .fc-event { 
-        white-space: normal; /* Permette al testo di andare a capo */
-        overflow: hidden; /* Evita che il testo fuoriesca */
-        height: auto; /* Adatta l'altezza automaticamente */
-        min-height: 40px; /* Imposta un'altezza minima */
-        font-size: 12px; /* Regola la dimensione del font per una migliore leggibilità */
-    }
+            white-space: nowrap; /* Change to nowrap to prevent breaking */
+            overflow: hidden;
+            height: auto;
+            min-height: 40px;
+            font-size: 10px; /* Smaller font for better fitting */
+            text-align: center;
+        }
+        @media (max-width: 765px) {
+            .fc-event {
+                font-size: 8px; /* Even smaller font size for small screens */
+            }
+        }
     </style>
+    
+    
 </head>
 <body>
     <div class="container d-flex flex-column align-items-center">
@@ -227,6 +235,17 @@
             }
         }
 
+document.addEventListener('DOMContentLoaded', function() {
+    setInterval(updateDateTime, 1000);
+    checkTodayReservations();
+    loadScooters();
+    initCalendar();
+    $('#calendarButton').on('click', function() {
+        $('#calendarModal').modal('show');
+    });
+    midnightUpdate();
+});
+
 function initCalendar() {
     $('#calendar').fullCalendar({
         defaultView: $(window).width() < 765 ? 'agendaDay' : 'month',
@@ -239,17 +258,31 @@ function initCalendar() {
         contentHeight: 'auto',
         aspectRatio: 1.35,
         events: loadEvents,
-        eventRender: function(event, element) {
-            // Directly setting the title to just the scooter number for all views
-            element.find('.fc-title').text(event.title);
-        },
-        windowResize: function(view) {
-            if ($(window).width() < 765) {
-                $('#calendar').fullCalendar('changeView', 'agendaDay');
-            } else {
-                $('#calendar').fullCalendar('changeView', 'month');
-            }
-        }
+        eventRender: function(event, element, view) {
+    // Imposta il titolo per ogni evento basandosi sulla vista corrente
+    if (view.name === 'agendaDay') {
+        // Vista giorno: mostra più dettagli
+        element.find('.fc-title').html(`<strong>${event.title}</strong>`);
+    } else {
+        // Per le viste mese e settimana, mostra solo il numero del scooter
+        element.find('.fc-title').text(event.title.replace('Scooter ', ''));
+    }
+    // Aggiungi un tooltip per mostrare dettagli quando l'utente passa il mouse sopra l'evento
+    $(element).tooltip({
+        title: event.title,
+        placement: 'top',
+        container: 'body'
+    });
+},
+windowResize: function(view) {
+    if ($(window).width() < 765) {
+        $('#calendar').fullCalendar('changeView', 'agendaDay');
+    } else {
+        $('#calendar').fullCalendar('changeView', 'month');
+    }
+}
+
+
     });
 }
 
@@ -259,12 +292,11 @@ function loadEvents(start, end, timezone, callback) {
         snapshot.forEach(child => {
             const scooter = child.val();
             if (scooter.status !== 'disponibile' && scooter.name) { 
-                // Simplified event title to only include the scooter number
                 const eventTitle = `Scooter ${scooter.name}`;
                 events.push({
                     title: eventTitle,
                     start: moment().add(scooter.daysRemaining, 'days').startOf('day').toDate(),
-                    allDay: true, // Ensure it's marked as an all-day event
+                    allDay: true,
                     color: getCalendarColor(scooter.status)
                 });
             }
