@@ -227,43 +227,6 @@
             }
         }
 
-        function initCalendar() {
-    $('#calendar').fullCalendar({
-        defaultView: $(window).width() < 765 ? 'agendaDay' : 'month',
-        header: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'month,agendaWeek,agendaDay'
-        },
-        height: 'auto',
-        contentHeight: 'auto',
-        aspectRatio: 1.35,
-        events: loadEvents,
-        eventRender: function(event, element, view) {
-            // Adjust how events are rendered based on the view type
-            if (view.name === 'month' || view.name === 'agendaWeek') {
-                // For month and week views, show less information
-                element.find('.fc-title').text(`Scooter ${event.title}`);
-            } else {
-                // For day views, show more detailed information
-                element.find('.fc-title').html(`<strong>${event.title}</strong>`);
-            }
-            // Add tooltips for all views
-            $(element).tooltip({
-                title: event.title + (event.extendedProps.details ? ": " + event.extendedProps.details : ""),
-                placement: 'top'
-            });
-        },
-        windowResize: function(view) {
-            if ($(window).width() < 765) {
-                $('#calendar').fullCalendar('changeView', 'agendaDay');
-            } else {
-                $('#calendar').fullCalendar('changeView', 'month');
-            }
-        }
-    });
-}
-
 function initCalendar() {
     $('#calendar').fullCalendar({
         defaultView: $(window).width() < 765 ? 'agendaDay' : 'month',
