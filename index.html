@@ -31,6 +31,13 @@
         .btn-danger { background-color: #dc3545; }
         .out-of-service { background-color: #6c757d; }
         .modal-content { font-family: 'Roboto', sans-serif; }
+        .fc-event { 
+        white-space: normal; /* Permette al testo di andare a capo */
+        overflow: hidden; /* Evita che il testo fuoriesca */
+        height: auto; /* Adatta l'altezza automaticamente */
+        min-height: 40px; /* Imposta un'altezza minima */
+        font-size: 12px; /* Regola la dimensione del font per una migliore leggibilità */
+    }
     </style>
 </head>
 <body>
@@ -207,33 +214,106 @@
         }
 
         function initCalendar() {
-            $('#calendar').fullCalendar({
-                events: function(start, end, timezone, callback) {
-                    dbRef.once('value').then(snapshot => {
-                        const events = [];
-                        snapshot.forEach(child => {
-                            if (child.val().status !== 'disponibile') {
-                                events.push({
-                                    title: `${child.val().name} - ${child.val().status}`,
-                                    start: moment().add(child.val().daysRemaining, 'days'), // assuming 'daysRemaining' is the number of days from today
-                                    color: getCalendarColor(child.val().status) // Different color based on status
-                                });
-                            }
-                        });
-                        callback(events);
-                    });
-                }
+    $('#calendar').fullCalendar({
+        defaultView: $(window).width() < 765 ? 'agendaDay' : 'month',
+        header: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'month,agendaWeek,agendaDay'
+        },
+        height: 'auto',
+        contentHeight: 'auto',
+        aspectRatio: 1.35,
+        events: loadEvents,
+        eventClick: function(info) {
+            if (info.event.extendedProps.details) {
+                alert('Dettagli: ' + info.event.extendedProps.details);
+            }
+        },
+        eventRender: function(event, element) {
+            element.find('.fc-title').html(`<strong>${event.title}</strong>`); // Usa .html per garantire che tutto il titolo sia renderizzato correttamente
+            // Tooltip per mostrare il titolo completo al passaggio del mouse
+            $(element).tooltip({
+                title: event.title + (event.extendedProps.details ? ": " + event.extendedProps.details : ""),
+                placement: 'top'
             });
-        }
-
-        function getCalendarColor(status) {
-            switch(status) {
-                case 'rientra_oggi': return '#ffc107'; // yellow
-                case 'non_disponibile': return '#6c757d'; // gray
-                case 'noleggiato': return '#dc3545'; // red
-                default: return '#28a745'; // green
+        },
+        windowResize: function(view) {
+            if ($(window).width() < 765) {
+                $('#calendar').fullCalendar('changeView', 'agendaDay');
+            } else {
+                $('#calendar').fullCalendar('changeView', 'month');
             }
         }
+    });
+}
+
+
+function loadEvents(start, end, timezone, callback) {
+    dbRef.once('value').then(snapshot => {
+        const events = [];
+        snapshot.forEach(child => {
+            const scooter = child.val();
+            if (scooter.status !== 'disponibile' && scooter.name) { // Assicurarsi che il nome dello scooter sia definito
+                events.push({
+                    title: `Scooter ${scooter.name}`, // Mostra solo il numero o il nome dello scooter
+                    start: moment().add(scooter.daysRemaining, 'days').startOf('day').toDate(), // Imposta l'evento per tutto il giorno
+                    end: moment().add(scooter.daysRemaining + 1, 'days').startOf('day').toDate(),
+                    allDay: true, // Specifica che l'evento occupa tutto il giorno
+                    color: getCalendarColor(scooter.status),
+                    extendedProps: {
+                        details: scooter.customerName ? scooter.customerName : "" // Non mostra "Nessun dettaglio" se non ci sono dettagli
+                    }
+                });
+            }
+        });
+        callback(events);
+    });
+}
+
+function initCalendar() {
+    $('#calendar').fullCalendar({
+        defaultView: $(window).width() < 765 ? 'agendaDay' : 'month',
+        header: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'month,agendaWeek,agendaDay'
+        },
+        height: 'auto',
+        contentHeight: 'auto',
+        aspectRatio: 1.35,
+        events: loadEvents,
+        eventClick: function(info) {
+            if (info.event.extendedProps.details) {
+                alert('Dettagli: ' + info.event.extendedProps.details); // Mostra dettagli solo se presenti
+            }
+        },
+        eventRender: function(event, element) {
+            if (event.extendedProps.details) {
+                element.find('.fc-title').append(`<br/>${event.extendedProps.details}`); // Mostra dettagli solo se presenti
+            }
+        },
+        windowResize: function(view) {
+            if ($(window). width() < 765) {
+                $('#calendar').fullCalendar('changeView', 'agendaDay');
+            } else {
+                $('#calendar').fullCalendar('changeView', 'month');
+            }
+        }
+    });
+}
+
+
+
+function getCalendarColor(status) {
+    switch(status) {
+        case 'rientra_oggi': return '#ffc107';
+        case 'non_disponibile': return '#6c757d';
+        case 'noleggiato': return '#dc3545';
+        default: return '#28a745';
+    }
+}
+
 
         function midnightUpdate() {
             const now = new Date();
