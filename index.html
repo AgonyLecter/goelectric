@@ -136,39 +136,53 @@
         }
 
         function checkTodayReservations() {
-            const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-            reservationsRef.orderByChild('date').equalTo(today).on('value', snapshot => {
-                const reservations = snapshot.val();
-                if (reservations) {
-                    let messages = "Prenotazioni per oggi:";
-                    for (let key in reservations) {
-                        messages += `\n${reservations[key].customerName} - ${reservations[key].scooterCount} scooter - ${reservations[key].date}`;
-                    }
-                    document.getElementById('notifications').textContent = messages;
-                } else {
-                    document.getElementById('notifications').textContent = "Nessuna prenotazione per oggi.";
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    reservationsRef.orderByChild('date').equalTo(today).on('value', snapshot => {
+        const reservations = snapshot.val();
+        if (reservations) {
+            let messages = "<ul>"; // Usa un elenco HTML per visualizzare le prenotazioni
+            for (let key in reservations) {
+                const res = reservations[key];
+                messages += `<li>${res.customerName} - ${res.scooterCount} scooter - Data: ${res.date} - Ora: ${res.time || "Non specificata"}`;
+                if (res.delivery) {
+                    messages += ` - Consegna: ${res.address || "Indirizzo non specificato"}`;
                 }
-            });
+                messages += "</li>";
+            }
+            messages += "</ul>";
+            document.getElementById('notifications').innerHTML = messages;
+        } else {
+            document.getElementById('notifications').textContent = "Nessuna prenotazione per oggi.";
         }
+    });
+}
+
 
         function loadScooters() {
-            dbRef.on('value', snapshot => {
-                const data = snapshot.val();
-                const container = document.getElementById('scooterList');
-                container.innerHTML = '';
-                Object.keys(data).sort((a, b) => a - b).forEach(key => {
-                    const scooter = data[key];
-                    const scooterButton = document.createElement('button');
-                    scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-                    scooterButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
-                    scooterButton.onclick = () => {
-                        currentScooterKey = key;
-                        showManageModal(scooter);
-                    };
-                    container.appendChild(scooterButton);
-                });
-            });
-        }
+    dbRef.on('value', snapshot => {
+        const data = snapshot.val();
+        const container = document.getElementById('scooterList');
+        container.innerHTML = '';
+        Object.keys(data).sort((a, b) => a - b).forEach(key => {
+            const scooter = data[key];
+            const scooterButton = document.createElement('button');
+            scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+            scooterButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
+            if (scooter.pickupTime) { // Assicurati che pickupTime sia un campo nel tuo DB
+                scooterButton.textContent += ` - Ritiro: ${scooter.pickupTime}`;
+            }
+            if (scooter.delivery) {
+                scooterButton.textContent += ` - Consegna: ${scooter.deliveryAddress}`;
+            }
+            scooterButton.onclick = () => {
+                currentScooterKey = key;
+                showManageModal(scooter);
+            };
+            container.appendChild(scooterButton);
+        });
+    });
+}
+
 
         function showManageModal(scooter) {
             document.getElementById('daysInput').value = scooter.daysRemaining || 2;
@@ -254,15 +268,17 @@ function loadEvents(start, end, timezone, callback) {
         const events = [];
         snapshot.forEach(child => {
             const scooter = child.val();
-            if (scooter.status !== 'disponibile' && scooter.name) { // Assicurarsi che il nome dello scooter sia definito
+            if (scooter.status !== 'disponibile' && scooter.name) { 
+                const eventTitle = `Scooter ${scooter.name} - Ritiro: ${scooter.pickupTime || 'Non specificato'}`;
+                const description = scooter.delivery ? `Consegna a: ${scooter.deliveryAddress}` : 'Nessuna consegna';
                 events.push({
-                    title: `Scooter ${scooter.name}`, // Mostra solo il numero o il nome dello scooter
-                    start: moment().add(scooter.daysRemaining, 'days').startOf('day').toDate(), // Imposta l'evento per tutto il giorno
+                    title: eventTitle,
+                    start: moment().add(scooter.daysRemaining, 'days').startOf('day').toDate(),
                     end: moment().add(scooter.daysRemaining + 1, 'days').startOf('day').toDate(),
-                    allDay: true, // Specifica che l'evento occupa tutto il giorno
+                    allDay: true,
                     color: getCalendarColor(scooter.status),
                     extendedProps: {
-                        details: scooter.customerName ? scooter.customerName : "" // Non mostra "Nessun dettaglio" se non ci sono dettagli
+                        details: description
                     }
                 });
             }
@@ -270,6 +286,7 @@ function loadEvents(start, end, timezone, callback) {
         callback(events);
     });
 }
+
 
 function initCalendar() {
     $('#calendar').fullCalendar({
