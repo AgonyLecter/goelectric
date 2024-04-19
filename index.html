@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Scooter GoElectric</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.0/fullcalendar.min.css" rel="stylesheet">
+    <link rel="icon" href="logo.ico">
     <style>
         body {
             background-color: #f4f4f4;
@@ -31,37 +31,23 @@
         .btn-danger { background-color: #dc3545; }
         .out-of-service { background-color: #6c757d; }
         .modal-content { font-family: 'Roboto', sans-serif; }
-        .fc-event { 
-            white-space: nowrap; /* Change to nowrap to prevent breaking */
-            overflow: hidden;
-            height: auto;
-            min-height: 40px;
-            font-size: 10px; /* Smaller font for better fitting */
-            text-align: center;
-        }
-        @media (max-width: 765px) {
-            .fc-event {
-                font-size: 8px; /* Even smaller font size for small screens */
-            }
-        }
     </style>
-    
-    
 </head>
 <body>
     <div class="container d-flex flex-column align-items-center">
         <img src="logo.png" class="logo mb-3" alt="GoElectric Logo">
         <div id="navMenu" class="mb-3">
             <a href="reservations.html" class="btn btn-primary">Reservations</a>
-            <button class="btn btn-info" id="calendarButton">Calendario</button>
+            <button class="btn btn-info" id="sortByReturnButton">Ordina per Rientri</button>
         </div>
         <div id="currentDateTime"></div>
-        <div id="notifications"></div>
+        <div id="notifications">Prenotazioni di oggi:</div>
         <div id="scooterList" class="w-100 row"></div>
+        <button class="btn btn-secondary mt-3" id="returnButton" style="display:none;">Torna alla vista principale</button>
         <div id="footer" class="mt-3 text-secondary"> &reg;ScrittoMatitato&Inchiostrato by MichaeldettoDamianodettoFabrizio </div>
     </div>
 
-    <!-- Modals for managing scooters and calendar -->
+    <!-- Modals for managing scooters -->
     <div class="modal" tabindex="-1" role="dialog" id="manageScooterModal">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -88,23 +74,8 @@
         </div>
     </div>
 
-    <div class="modal fade" id="calendarModal" tabindex="-1" role="dialog" aria-labelledby="calendarModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="calendarModalLabel">Calendario Scooter</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div id="calendar"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.0/fullcalendar.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -121,20 +92,68 @@
         };
         firebase.initializeApp(firebaseConfig);
 
-        const dbRef = firebase.database().ref('scooters');
-        const reservationsRef = firebase.database().ref('reservations');
-        let currentScooterKey;
+        const dbRefScooters = firebase.database().ref('scooters');
+        const dbRefReservations = firebase.database().ref('reservations');
 
         document.addEventListener('DOMContentLoaded', function() {
             setInterval(updateDateTime, 1000);
+            checkAndUpdateScooters(); // Aggiungi questa funzione per controllare e aggiornare gli scooter al caricamento
             checkTodayReservations();
             loadScooters();
-            initCalendar();
-            $('#calendarButton').on('click', function() {
-                $('#calendarModal').modal('show');
+            $('#sortByReturnButton').on('click', function() {
+                displayScootersByReturnDate();
+                $('#returnButton').show();
             });
-            midnightUpdate();
+            $('#returnButton').on('click', function() {
+                returnToMainView();
+            });
         });
+
+        function checkAndUpdateScooters() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalizza l'orario a mezzanotte
+
+            dbRefScooters.once('value', snapshot => {
+                snapshot.forEach(child => {
+                    let { daysRemaining, status, lastUpdated } = child.val();
+                    const lastUpdatedDate = new Date(lastUpdated || today.toISOString());
+                    lastUpdatedDate.setHours(0, 0, 0, 0);
+
+                    if (!lastUpdated || lastUpdatedDate < today) {
+                        if (status !== 'disponibile' && status !== 'non_disponibile') {
+                            daysRemaining = daysRemaining > 0 ? daysRemaining - 1 : 0;
+                            status = daysRemaining === 0 ? 'rientra_oggi' : (status === 'rientra_oggi' ? 'disponibile' : status);
+
+                            child.ref.update({
+                                daysRemaining: daysRemaining,
+                                status: status,
+                                lastUpdated: today.toISOString()
+                            });
+                        }
+                    }
+                });
+            });
+        }
+
+        function checkTodayReservations() {
+            const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            dbRefReservations.orderByChild('date').equalTo(today).on('value', snapshot => {
+                const reservations = snapshot.val();
+                const reservationsElement = document.getElementById('notifications');
+                reservationsElement.innerHTML = 'Prenotazioni di oggi:';
+                if (reservations) {
+                    let listHtml = '<ul>';
+                    for (let key in reservations) {
+                        const res = reservations[key];
+                        listHtml += `<li>${res.customerName} - ${res.scooterCount} scooter - ${res.date} alle ${res.time}, Consegna: ${res.delivery ? 'Sì, a ' + res.address : 'No'}</li>`;
+                    }
+                    listHtml += '</ul>';
+                    reservationsElement.innerHTML += listHtml;
+                } else {
+                    reservationsElement.innerHTML += ' Nessuna prenotazione per oggi.';
+                }
+            });
+        }
 
         function updateDateTime() {
             const now = new Date();
@@ -143,54 +162,53 @@
             });
         }
 
-        function checkTodayReservations() {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    reservationsRef.orderByChild('date').equalTo(today).on('value', snapshot => {
-        const reservations = snapshot.val();
-        if (reservations) {
-            let messages = "<ul>"; // Usa un elenco HTML per visualizzare le prenotazioni
-            for (let key in reservations) {
-                const res = reservations[key];
-                messages += `<li>${res.customerName} - ${res.scooterCount} scooter - Data: ${res.date} - Ora: ${res.time || "Non specificata"}`;
-                if (res.delivery) {
-                    messages += ` - Consegna: ${res.address || "Indirizzo non specificato"}`;
-                }
-                messages += "</li>";
-            }
-            messages += "</ul>";
-            document.getElementById('notifications').innerHTML = messages;
-        } else {
-            document.getElementById('notifications').textContent = "Nessuna prenotazione per oggi.";
-        }
-    });
-}
-
-
         function loadScooters() {
-    dbRef.on('value', snapshot => {
-        const data = snapshot.val();
-        const container = document.getElementById('scooterList');
-        container.innerHTML = '';
-        Object.keys(data).sort((a, b) => a - b).forEach(key => {
-            const scooter = data[key];
-            const scooterButton = document.createElement('button');
-            scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-            scooterButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
-            if (scooter.pickupTime) { // Assicurati che pickupTime sia un campo nel tuo DB
-                scooterButton.textContent += ` - Ritiro: ${scooter.pickupTime}`;
-            }
-            if (scooter.delivery) {
-                scooterButton.textContent += ` - Consegna: ${scooter.deliveryAddress}`;
-            }
-            scooterButton.onclick = () => {
-                currentScooterKey = key;
-                showManageModal(scooter);
-            };
-            container.appendChild(scooterButton);
-        });
-    });
-}
+            dbRefScooters.on('value', snapshot => {
+                const data = snapshot.val();
+                const container = document.getElementById('scooterList');
+                container.innerHTML = '';
+                Object.keys(data).forEach(key => {
+                    const scooter = data[key];
+                    const scooterButton = document.createElement('button');
+                    scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+                    scooterButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
+                    scooterButton.onclick = () => {
+                        currentScooterKey = key;
+                        showManageModal(scooter);
+                    };
+                    container.appendChild(scooterButton);
+                });
+            });
+        }
 
+        function displayScootersByReturnDate() {
+            dbRefScooters.orderByChild('daysRemaining').on('value', snapshot => {
+                const scooters = snapshot.val();
+                const container = document.getElementById('scooterList');
+                container.innerHTML = '';
+                Object.keys(scooters)
+                    .map(key => ({ key, ...scooters[key] }))
+                    .filter(scooter => scooter.daysRemaining >= 0 && scooter.status !== 'disponibile' && scooter.status !== 'non_disponibile')
+                    .sort((a, b) => a.daysRemaining - b.daysRemaining)
+                    .forEach(scooter => {
+                        const scooterButton = document.createElement('button');
+                        scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+                        let buttonText = `${scooter.name} - Rientra `;
+                        buttonText += scooter.daysRemaining === 0 ? 'oggi' : `in: ${scooter.daysRemaining} giorni`;
+                        scooterButton.textContent = buttonText;
+                        scooterButton.onclick = () => {
+                            currentScooterKey = scooter.key;
+                            showManageModal(scooter);
+                        };
+                        container.appendChild(scooterButton);
+                    });
+            });
+        }
+
+        function returnToMainView() {
+            loadScooters(); // Reload the initial list of scooters
+            $('#returnButton').hide(); // Hide the return button
+        }
 
         function showManageModal(scooter) {
             document.getElementById('daysInput').value = scooter.daysRemaining || 2;
@@ -208,15 +226,16 @@
             const updateObj = {
                 status: outOfService ? 'non_disponibile' : returnToday ? 'rientra_oggi' : 'noleggiato',
                 daysRemaining: returnToday || outOfService ? 0 : days
+
             };
-            dbRef.child(currentScooterKey).update(updateObj).then(() => {
+            dbRefScooters.child(currentScooterKey).update(updateObj).then(() => {
                 const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
                 manageModal.hide();
             });
         }
 
         function unlockScooter(key) {
-            dbRef.child(key).update({
+            dbRefScooters.child(key).update({
                 status: 'disponibile',
                 daysRemaining: 0
             }).then(() => {
@@ -233,112 +252,6 @@
                 case 'non_disponibile': return 'out-of-service';
                 default: return 'btn-danger';
             }
-        }
-
-document.addEventListener('DOMContentLoaded', function() {
-    setInterval(updateDateTime, 1000);
-    checkTodayReservations();
-    loadScooters();
-    initCalendar();
-    $('#calendarButton').on('click', function() {
-        $('#calendarModal').modal('show');
-    });
-    midnightUpdate();
-});
-
-function initCalendar() {
-    $('#calendar').fullCalendar({
-        defaultView: $(window).width() < 765 ? 'agendaDay' : 'month',
-        header: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'month,agendaWeek,agendaDay'
-        },
-        height: 'auto',
-        contentHeight: 'auto',
-        aspectRatio: 1.35,
-        events: loadEvents,
-        eventRender: function(event, element, view) {
-    // Imposta il titolo per ogni evento basandosi sulla vista corrente
-    if (view.name === 'agendaDay') {
-        // Vista giorno: mostra più dettagli
-        element.find('.fc-title').html(`<strong>${event.title}</strong>`);
-    } else {
-        // Per le viste mese e settimana, mostra solo il numero del scooter
-        element.find('.fc-title').text(event.title.replace('Scooter ', ''));
-    }
-    // Aggiungi un tooltip per mostrare dettagli quando l'utente passa il mouse sopra l'evento
-    $(element).tooltip({
-        title: event.title,
-        placement: 'top',
-        container: 'body'
-    });
-},
-windowResize: function(view) {
-    if ($(window).width() < 765) {
-        $('#calendar').fullCalendar('changeView', 'agendaDay');
-    } else {
-        $('#calendar').fullCalendar('changeView', 'month');
-    }
-}
-
-
-    });
-}
-
-function loadEvents(start, end, timezone, callback) {
-    dbRef.once('value').then(snapshot => {
-        const events = [];
-        snapshot.forEach(child => {
-            const scooter = child.val();
-            if (scooter.status !== 'disponibile' && scooter.name) { 
-                const eventTitle = `Scooter ${scooter.name}`;
-                events.push({
-                    title: eventTitle,
-                    start: moment().add(scooter.daysRemaining, 'days').startOf('day').toDate(),
-                    allDay: true,
-                    color: getCalendarColor(scooter.status)
-                });
-            }
-        });
-        callback(events);
-    });
-}
-
-function getCalendarColor(status) {
-    switch(status) {
-        case 'rientra_oggi': return '#ffc107';
-        case 'non_disponibile': return '#6c757d';
-        case 'noleggiato': return '#dc3545';
-        default: return '#28a745';
-    }
-}
-
-
-
-        function midnightUpdate() {
-            const now = new Date();
-            const msUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0) - now;
-            setTimeout(function() {
-                updateDaysRemaining();
-                midnightUpdate(); // Schedule the next update
-            }, msUntilMidnight);
-        }
-
-        function updateDaysRemaining() {
-            dbRef.once('value', snapshot => {
-                snapshot.forEach(child => {
-                    const scooter = child.val();
-                    if (scooter.daysRemaining > 0 && scooter.status !== 'non_disponibile') {
-                        let newDaysRemaining = scooter.daysRemaining - 1;
-                        let newStatus = newDaysRemaining === 0 ? 'disponibile' : scooter.status;
-                        dbRef.child(child.key).update({
-                            daysRemaining: newDaysRemaining,
-                            status: newStatus
-                        });
-                    }
-                });
-            });
         }
     </script>
 </body>
