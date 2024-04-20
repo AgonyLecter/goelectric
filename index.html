@@ -109,31 +109,35 @@
             });
         });
 
-        function checkAndUpdateScooters() {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+function checkAndUpdateScooters() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Setta l'orario a mezzanotte
 
-            dbRefScooters.once('value', snapshot => {
-                snapshot.forEach(child => {
-                    let { daysRemaining, status, lastUpdated } = child.val();
-                    const lastUpdatedDate = new Date(lastUpdated || today.toISOString());
-                    lastUpdatedDate.setHours(0, 0, 0, 0);
+    dbRefScooters.once('value', snapshot => {
+        snapshot.forEach(child => {
+            let { daysRemaining, status } = child.val();
+            let lastUpdated = child.val().lastUpdated || today.toISOString(); // Utilizza il valore esistente o imposta oggi come default
+            const lastUpdatedDate = new Date(lastUpdated);
+            lastUpdatedDate.setHours(0, 0, 0, 0); // Normalizza la data di ultimo aggiornamento a mezzanotte
 
-                    if (!lastUpdated || lastUpdatedDate < today) {
-                        if (status !== 'disponibile' && status !== 'non_disponibile') {
-                            daysRemaining = daysRemaining > 0 ? daysRemaining - 1 : 0;
-                            status = daysRemaining === 0 ? 'rientra_oggi' : (status === 'rientra_oggi' ? 'disponibile' : status);
+            // Confronta solo le date, non gli orari
+            if (lastUpdatedDate < today) {
+                daysRemaining = Math.max(0, daysRemaining - 1); // Decrementa i giorni rimanenti ma non meno di zero
+                if (daysRemaining === 0 && status === 'rientra_oggi') {
+                    status = 'disponibile'; // Cambia lo stato in disponibile se i giorni rimasti sono 0 e lo stato è 'rientra oggi'
+                }
 
-                            child.ref.update({
-                                daysRemaining: daysRemaining,
-                                status: status,
-                                lastUpdated: today.toISOString()
-                            });
-                        }
-                    }
+                // Aggiorna il database solo se necessario
+                child.ref.update({
+                    daysRemaining: daysRemaining,
+                    status: status,
+                    lastUpdated: today.toISOString() // Aggiorna la data di ultimo aggiornamento a oggi
                 });
-            });
-        }
+            }
+        });
+    });
+}
+
 
         function checkTodayReservations() {
             const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
