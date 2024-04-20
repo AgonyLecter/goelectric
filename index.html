@@ -97,7 +97,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             setInterval(updateDateTime, 1000);
-            checkAndUpdateScooters(); // Aggiungi questa funzione per controllare e aggiornare gli scooter al caricamento
+            checkAndUpdateScooters();
             checkTodayReservations();
             loadScooters();
             $('#sortByReturnButton').on('click', function() {
@@ -111,7 +111,7 @@
 
         function checkAndUpdateScooters() {
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Normalizza l'orario a mezzanotte
+            today.setHours(0, 0, 0, 0);
 
             dbRefScooters.once('value', snapshot => {
                 snapshot.forEach(child => {
@@ -206,8 +206,8 @@
         }
 
         function returnToMainView() {
-            loadScooters(); // Reload the initial list of scooters
-            $('#returnButton').hide(); // Hide the return button
+            loadScooters();
+            $('#returnButton').hide();
         }
 
         function showManageModal(scooter) {
@@ -256,3 +256,4 @@
     </script>
 </body>
 </html>
+
