@@ -190,29 +190,40 @@ function checkAndUpdateScooters() {
             });
         }
 
-        function displayScootersByReturnDate() {
-            dbRefScooters.orderByChild('daysRemaining').on('value', snapshot => {
-                const scooters = snapshot.val();
-                const container = document.getElementById('scooterList');
-                container.innerHTML = '';
-                Object.keys(scooters)
-                    .map(key => ({ key, ...scooters[key] }))
-                    .filter(scooter => scooter.daysRemaining >= 0 && scooter.status !== 'disponibile' && scooter.status !== 'non_disponibile')
-                    .sort((a, b) => a.daysRemaining - b.daysRemaining)
-                    .forEach(scooter => {
-                        const scooterButton = document.createElement('button');
-                        scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-                        let buttonText = `${scooter.name} - Rientra `;
-                        buttonText += scooter.daysRemaining === 0 ? 'oggi' : `in: ${scooter.daysRemaining} giorni`;
-                        scooterButton.textContent = buttonText;
-                        scooterButton.onclick = () => {
-                            currentScooterKey = scooter.key;
-                            showManageModal(scooter);
-                        };
-                        container.appendChild(scooterButton);
-                    });
+function displayScootersByReturnDate() {
+    dbRefScooters.orderByChild('daysRemaining').on('value', snapshot => {
+        const scooters = snapshot.val();
+        const container = document.getElementById('scooterList');
+        container.innerHTML = '';
+        Object.keys(scooters)
+            .map(key => ({ key, ...scooters[key] }))
+            .filter(scooter => scooter.status !== 'non_disponibile')  // Escludi scooter non disponibili
+            .sort((a, b) => {
+                // Ordina prima per status (rientra oggi e disponibili vengono dopo gli altri),
+                // poi per giorni rimanenti in ordine crescente
+                if (a.status === 'disponibile' && b.status !== 'disponibile') return 1;
+                if (b.status === 'disponibile' && a.status !== 'disponibile') return -1;
+                return a.daysRemaining - b.daysRemaining;
+            })
+            .forEach(scooter => {
+                const scooterButton = document.createElement('button');
+                scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+                let buttonText = `${scooter.name} - `;
+                if (scooter.status === 'disponibile') {
+                    buttonText += 'Disponibile';
+                } else {
+                    buttonText += scooter.daysRemaining === 0 ? 'Rientra oggi' : `Rientra in: ${scooter.daysRemaining} giorni`;
+                }
+                scooterButton.textContent = buttonText;
+                scooterButton.onclick = () => {
+                    currentScooterKey = scooter.key;
+                    showManageModal(scooter);
+                };
+                container.appendChild(scooterButton);
             });
-        }
+    });
+}
+
 
         function returnToMainView() {
             loadScooters();
