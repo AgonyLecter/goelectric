@@ -56,7 +56,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <input id="daysInput" type="number" class="form-control" min="1" value="2">
+                    <input id="daysInput" type="number" class="form-control" min="1" value="1">
                     <div class="form-check mt-2">
                         <input class="form-check-input" type="checkbox" id="returnToday">
                         <label class="form-check-label" for="returnToday">Rientra oggi</label>
@@ -215,7 +215,7 @@ function checkAndUpdateScooters() {
         }
 
         function showManageModal(scooter) {
-            document.getElementById('daysInput').value = scooter.daysRemaining || 2;
+            document.getElementById('daysInput').value = scooter.daysRemaining || 1;
             document.getElementById('returnToday').checked = scooter.status === 'rientra_oggi';
             document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
             const manageModal = new bootstrap.Modal(document.getElementById('manageScooterModal'));
