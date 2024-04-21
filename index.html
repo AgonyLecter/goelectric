@@ -111,32 +111,37 @@
 
 function checkAndUpdateScooters() {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Setta l'orario a mezzanotte
+    today.setHours(0, 0, 0, 0); // Imposta l'orario a mezzanotte
 
     dbRefScooters.once('value', snapshot => {
         snapshot.forEach(child => {
-            let { daysRemaining, status } = child.val();
-            let lastUpdated = child.val().lastUpdated || today.toISOString(); // Utilizza il valore esistente o imposta oggi come default
-            const lastUpdatedDate = new Date(lastUpdated);
+            let { daysRemaining, status, lastUpdated } = child.val();
+            const lastUpdatedDate = new Date(lastUpdated || today.toISOString());
             lastUpdatedDate.setHours(0, 0, 0, 0); // Normalizza la data di ultimo aggiornamento a mezzanotte
 
             // Confronta solo le date, non gli orari
             if (lastUpdatedDate < today) {
-                daysRemaining = Math.max(0, daysRemaining - 1); // Decrementa i giorni rimanenti ma non meno di zero
-                if (daysRemaining === 0 && status === 'rientra_oggi') {
-                    status = 'disponibile'; // Cambia lo stato in disponibile se i giorni rimasti sono 0 e lo stato è 'rientra oggi'
+                // Decrementa i giorni rimanenti se necessario e aggiorna lo stato
+                if (daysRemaining > 1) {
+                    daysRemaining -= 1; // Decrementa i giorni normalmente
+                } else if (daysRemaining === 1) {
+                    daysRemaining = 0;
+                    status = 'rientra_oggi'; // Cambia lo stato in "rientra oggi" se è l'ultimo giorno
+                } else if (daysRemaining === 0 && status === 'rientra_oggi') {
+                    status = 'disponibile'; // Cambia lo stato in "disponibile" se i giorni sono 0 e lo stato è "rientra oggi"
                 }
 
-                // Aggiorna il database solo se necessario
+                // Aggiorna il database
                 child.ref.update({
                     daysRemaining: daysRemaining,
                     status: status,
-                    lastUpdated: today.toISOString() // Aggiorna la data di ultimo aggiornamento a oggi
+                    lastUpdated: today.toISOString()
                 });
             }
         });
     });
 }
+
 
 
         function checkTodayReservations() {
