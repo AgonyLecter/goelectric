@@ -202,9 +202,9 @@ function displayScootersByReturnDate() {
             .sort((a, b) => {
                 // Definisci una mappa di priorità per gli stati
                 const statusPriority = {
-                    'rientra_oggi': 1,
-                    'noleggiato': 2,
-                    'disponibile': 3,
+                    'rientra_oggi': 2,
+                    'noleggiato': 3,
+                    'disponibile': 1,
                     'non_disponibile': 4
                 };
 
