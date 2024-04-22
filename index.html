@@ -192,7 +192,6 @@
         }
 
 function displayScootersByReturnDate() {
-    // Prima di aggiungere un nuovo ascoltatore, rimuovi quello esistente
     dbRefScooters.off('value');
     dbRefScooters.orderByChild('daysRemaining').on('value', snapshot => {
         const scooters = snapshot.val();
@@ -200,10 +199,20 @@ function displayScootersByReturnDate() {
         container.innerHTML = '';
         Object.keys(scooters)
             .map(key => ({ key, ...scooters[key] }))
-            .filter(scooter => scooter.status !== 'non_disponibile')
             .sort((a, b) => {
-                if (a.status === 'disponibile' && b.status !== 'disponibile') return 1;
-                if (b.status === 'disponibile' && a.status !== 'disponibile') return -1;
+                // Definisci una mappa di priorità per gli stati
+                const statusPriority = {
+                    'rientra_oggi': 1,
+                    'noleggiato': 2,
+                    'disponibile': 3,
+                    'non_disponibile': 4
+                };
+
+                // Ordina prima per priorità di stato
+                if (statusPriority[a.status] < statusPriority[b.status]) return -1;
+                if (statusPriority[a.status] > statusPriority[b.status]) return 1;
+
+                // Se lo stato è lo stesso, ordina per giorni rimanenti
                 return a.daysRemaining - b.daysRemaining;
             })
             .forEach(scooter => {
@@ -212,8 +221,12 @@ function displayScootersByReturnDate() {
                 let buttonText = `${scooter.name} - `;
                 if (scooter.status === 'disponibile') {
                     buttonText += 'Disponibile';
+                } else if (scooter.status === 'rientra_oggi') {
+                    buttonText += 'Rientra oggi';
+                } else if (scooter.status === 'non_disponibile') {
+                    buttonText += 'Non disponibile';
                 } else {
-                    buttonText += scooter.daysRemaining === 0 ? 'Rientra oggi' : `Rientra in: ${scooter.daysRemaining} giorni`;
+                    buttonText += `Rientra in: ${scooter.daysRemaining} giorni`;
                 }
                 scooterButton.textContent = buttonText;
                 scooterButton.onclick = () => {
@@ -224,6 +237,7 @@ function displayScootersByReturnDate() {
             });
     });
 }
+
 
 
 
