@@ -191,17 +191,17 @@
             });
         }
 
-        function displayScootersByReturnDate() {
+function displayScootersByReturnDate() {
+    // Prima di aggiungere un nuovo ascoltatore, rimuovi quello esistente
+    dbRefScooters.off('value');
     dbRefScooters.orderByChild('daysRemaining').on('value', snapshot => {
         const scooters = snapshot.val();
         const container = document.getElementById('scooterList');
         container.innerHTML = '';
         Object.keys(scooters)
             .map(key => ({ key, ...scooters[key] }))
-            .filter(scooter => scooter.status !== 'non_disponibile')  // Escludi scooter non disponibili
+            .filter(scooter => scooter.status !== 'non_disponibile')
             .sort((a, b) => {
-                // Ordina prima per status (rientra oggi e disponibili vengono dopo gli altri),
-                // poi per giorni rimanenti in ordine crescente
                 if (a.status === 'disponibile' && b.status !== 'disponibile') return 1;
                 if (b.status === 'disponibile' && a.status !== 'disponibile') return -1;
                 return a.daysRemaining - b.daysRemaining;
@@ -224,6 +224,7 @@
             });
     });
 }
+
 
 
         function returnToMainView() {
@@ -252,6 +253,7 @@
             dbRefScooters.child(currentScooterKey).update(updateObj).then(() => {
                 const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
                 manageModal.hide();
+                returnToMainView();
             });
         }
 
