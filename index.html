@@ -109,38 +109,41 @@
             });
         });
 
-        function checkAndUpdateScooters() {
-    const todayTimestamp = new Date().setHours(0, 0, 0, 0);
+function checkAndUpdateScooters() {
+    const now = new Date();
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayMidnightTimestamp = todayMidnight.getTime();
     const dbRefScooters = firebase.database().ref('scooters');
 
     dbRefScooters.once('value', snapshot => {
         snapshot.forEach(child => {
             const { daysRemaining, status, lastUpdated } = child.val();
+            const lastUpdatedDate = new Date(lastUpdated);
+            const lastUpdatedTimestamp = lastUpdatedDate.getTime();
 
-            if (lastUpdated < todayTimestamp) {
+            if (lastUpdatedTimestamp < todayMidnightTimestamp) {
                 let updatedDaysRemaining = daysRemaining;
                 let updatedStatus = status;
 
-                if (lastUpdated !== 0) {
-                    if (updatedDaysRemaining > 1) {
-                        updatedDaysRemaining -= 1;
-                    } else if (updatedDaysRemaining === 1) {
-                        updatedDaysRemaining = 0;
-                        updatedStatus = 'rientra_oggi';
-                    } else if (updatedDaysRemaining === 0 && updatedStatus === 'rientra_oggi') {
-                        updatedStatus = 'disponibile';
-                    }
+                if (updatedDaysRemaining > 1) {
+                    updatedDaysRemaining -= 1;
+                } else if (updatedDaysRemaining === 1) {
+                    updatedDaysRemaining = 0;
+                    updatedStatus = 'rientra_oggi';
+                } else if (updatedDaysRemaining === 0 && updatedStatus === 'rientra_oggi') {
+                    updatedStatus = 'disponibile';
                 }
 
                 child.ref.update({
                     daysRemaining: updatedDaysRemaining,
                     status: updatedStatus,
-                    lastUpdated: todayTimestamp
+                    lastUpdated: now.toISOString()
                 });
             }
         });
     });
 }
+
 
 
 
