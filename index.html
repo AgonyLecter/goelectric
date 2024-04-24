@@ -48,31 +48,37 @@
     </div>
 
     <!-- Modals for managing scooters -->
-    <div class="modal" tabindex="-1" role="dialog" id="manageScooterModal">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Gestisci Scooter</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modals for managing scooters -->
+<div class="modal" tabindex="-1" role="dialog" id="manageScooterModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gestisci Scooter</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input id="daysInput" type="number" class="form-control" min="1" value="1">
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="returnToday">
+                    <label class="form-check-label" for="returnToday">Rientra oggi</label>
                 </div>
-                <div class="modal-body">
-                    <input id="daysInput" type="number" class="form-control" min="1" value="1">
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="returnToday">
-                        <label class="form-check-label" for="returnToday">Rientra oggi</label>
-                    </div>
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="outOfService">
-                        <label class="form-check-label" for="outOfService">Non disponibile</label>
-                    </div>
-                    <button type="button" class="btn btn-secondary mt-2" onclick="unlockScooter(currentScooterKey)">Sblocca</button>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="outOfService">
+                    <label class="form-check-label" for="outOfService">Non disponibile</label>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" onclick="submitManage()">Conferma</button>
+                <div class="mt-2">
+                    <label for="returnTime">Ora di Rientro:</label>
+                    <input type="time" id="returnTime" class="form-control">
                 </div>
+                <button type="button" class="btn btn-secondary mt-2" onclick="unlockScooter(currentScooterKey)">Sblocca</button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="submitManage()">Conferma</button>
             </div>
         </div>
     </div>
+</div>
+
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
@@ -109,7 +115,7 @@
             });
         });
 
-function checkAndUpdateScooters() {
+        function checkAndUpdateScooters() {
     const now = new Date();
     const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayMidnightTimestamp = todayMidnight.getTime();
@@ -117,13 +123,14 @@ function checkAndUpdateScooters() {
 
     dbRefScooters.once('value', snapshot => {
         snapshot.forEach(child => {
-            const { daysRemaining, status, lastUpdated } = child.val();
+            const { daysRemaining, status, lastUpdated, returnTime } = child.val();
             const lastUpdatedDate = new Date(lastUpdated);
             const lastUpdatedTimestamp = lastUpdatedDate.getTime();
 
             if (lastUpdatedTimestamp < todayMidnightTimestamp) {
                 let updatedDaysRemaining = daysRemaining;
                 let updatedStatus = status;
+                let updatedReturnTime = returnTime; // Mantieni il valore esistente di default
 
                 if (updatedDaysRemaining > 1) {
                     updatedDaysRemaining -= 1;
@@ -132,17 +139,21 @@ function checkAndUpdateScooters() {
                     updatedStatus = 'rientra_oggi';
                 } else if (updatedDaysRemaining === 0 && updatedStatus === 'rientra_oggi') {
                     updatedStatus = 'disponibile';
+                    updatedReturnTime = null; // Reset dell'orario di rientro quando diventa disponibile
                 }
 
+                // Aggiorna il database con i nuovi valori
                 child.ref.update({
                     daysRemaining: updatedDaysRemaining,
                     status: updatedStatus,
-                    lastUpdated: now.toISOString()
+                    lastUpdated: now.toISOString(),
+                    returnTime: updatedReturnTime // Aggiorna l'orario di rientro se necessario
                 });
             }
         });
     });
 }
+
 
 
 
@@ -176,60 +187,56 @@ function checkAndUpdateScooters() {
         }
 
         function loadScooters() {
-            dbRefScooters.on('value', snapshot => {
-                const data = snapshot.val();
-                const container = document.getElementById('scooterList');
-                container.innerHTML = '';
-                Object.keys(data).forEach(key => {
-                    const scooter = data[key];
-                    const scooterButton = document.createElement('button');
-                    scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-                    scooterButton.textContent = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
-                    scooterButton.onclick = () => {
-                        currentScooterKey = key;
-                        showManageModal(scooter);
-                    };
-                    container.appendChild(scooterButton);
-                });
-            });
-        }
+    dbRefScooters.on('value', snapshot => {
+        const data = snapshot.val();
+        const container = document.getElementById('scooterList');
+        container.innerHTML = '';
+        Object.keys(data).forEach(key => {
+            const scooter = data[key];
+            const scooterButton = document.createElement('button');
+            scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+            let buttonText = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
+            if (scooter.returnTime) {
+                buttonText += ` - Rientra: ${scooter.returnTime}`;
+            }
+            scooterButton.textContent = buttonText;
+            scooterButton.onclick = () => {
+                currentScooterKey = key;
+                showManageModal(scooter);
+            };
+            container.appendChild(scooterButton);
+        });
+    });
+}
 
 function displayScootersByReturnDate() {
     dbRefScooters.off('value');
-    dbRefScooters.orderByChild('daysRemaining').on('value', snapshot => {
+    dbRefScooters.orderByChild('returnTime').on('value', snapshot => {
         const scooters = snapshot.val();
         const container = document.getElementById('scooterList');
         container.innerHTML = '';
         Object.keys(scooters)
             .map(key => ({ key, ...scooters[key] }))
             .sort((a, b) => {
-                // Definisci una mappa di priorità per gli stati
                 const statusPriority = {
+                    'disponibile': 1,
                     'rientra_oggi': 2,
                     'noleggiato': 3,
-                    'disponibile': 1,
                     'non_disponibile': 4
                 };
-
-                // Ordina prima per priorità di stato
-                if (statusPriority[a.status] < statusPriority[b.status]) return -1;
-                if (statusPriority[a.status] > statusPriority[b.status]) return 1;
-
-                // Se lo stato è lo stesso, ordina per giorni rimanenti
-                return a.daysRemaining - b.daysRemaining;
+                if (statusPriority[a.status] !== statusPriority[b.status]) {
+                    return statusPriority[a.status] - statusPriority[b.status];
+                }
+                return (a.returnTime || "23:59") < (b.returnTime || "23:59") ? -1 : 1;
             })
             .forEach(scooter => {
                 const scooterButton = document.createElement('button');
                 scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-                let buttonText = `${scooter.name} - `;
-                if (scooter.status === 'disponibile') {
-                    buttonText += 'Disponibile';
-                } else if (scooter.status === 'rientra_oggi') {
-                    buttonText += 'Rientra oggi';
-                } else if (scooter.status === 'non_disponibile') {
-                    buttonText += 'Non disponibile';
+                let buttonText = `${scooter.name} - ${scooter.status}`;
+                if (scooter.returnTime) {
+                    buttonText += ` - Rientra: ${scooter.returnTime}`;
                 } else {
-                    buttonText += `Rientra in: ${scooter.daysRemaining} giorni`;
+                    buttonText += ` - Non specificato`;
                 }
                 scooterButton.textContent = buttonText;
                 scooterButton.onclick = () => {
@@ -244,46 +251,59 @@ function displayScootersByReturnDate() {
 
 
 
+
+
         function returnToMainView() {
             loadScooters();
             $('#returnButton').hide();
         }
 
         function showManageModal(scooter) {
-            document.getElementById('daysInput').value = scooter.daysRemaining || 1;
-            document.getElementById('returnToday').checked = scooter.status === 'rientra_oggi';
-            document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
-            const manageModal = new bootstrap.Modal(document.getElementById('manageScooterModal'));
-            manageModal.show();
-        }
+    document.getElementById('daysInput').value = scooter.daysRemaining || 1;
+    document.getElementById('returnToday').checked = scooter.status === 'rientra_oggi';
+    document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
+    document.getElementById('returnTime').value = scooter.returnTime || ''; // Reset dell'input dell'orario di rientro
+    const manageModal = new bootstrap.Modal(document.getElementById('manageScooterModal'));
+    manageModal.show();
+}
 
-        function submitManage() {
-            const daysInput = document.getElementById('daysInput');
-            const days = parseInt(daysInput.value, 10);
-            const returnToday = document.getElementById('returnToday').checked;
-            const outOfService = document.getElementById('outOfService').checked;
-            const updateObj = {
-                status: outOfService ? 'non_disponibile' : returnToday ? 'rientra_oggi' : 'noleggiato',
-                daysRemaining: returnToday || outOfService ? 0 : days
 
-            };
-            dbRefScooters.child(currentScooterKey).update(updateObj).then(() => {
-                const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
-                manageModal.hide();
-                returnToMainView();
-            });
-        }
+function submitManage() {
+    const daysInput = document.getElementById('daysInput');
+    const days = parseInt(daysInput.value, 10);
+    const returnToday = document.getElementById('returnToday').checked;
+    const outOfService = document.getElementById('outOfService').checked;
+    const returnTimeInput = document.getElementById('returnTime');
+    const returnTime = returnTimeInput.value ? returnTimeInput.value : null; // Prendi l'orario solo se fornito
 
-        function unlockScooter(key) {
-            dbRefScooters.child(key).update({
-                status: 'disponibile',
-                daysRemaining: 0
-            }).then(() => {
-                alert('Scooter sbloccato con successo.');
-                const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
-                manageModal.hide();
-            });
-        }
+    const updateObj = {
+        status: outOfService ? 'non_disponibile' : returnToday ? 'rientra_oggi' : 'noleggiato',
+        daysRemaining: returnToday || outOfService ? 0 : days,
+        returnTime: returnTime // Aggiorna l'orario di rientro solo se fornito
+    };
+
+    dbRefScooters.child(currentScooterKey).update(updateObj).then(() => {
+        const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
+        manageModal.hide();
+        returnToMainView();
+    });
+}
+
+
+
+function unlockScooter(key) {
+    dbRefScooters.child(key).update({
+        status: 'disponibile',
+        daysRemaining: 0,
+        returnTime: null  // Resettare l'orario di rientro quando lo scooter viene sbloccato
+    }).then(() => {
+        alert('Scooter sbloccato con successo.');
+        const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
+        manageModal.hide();
+        returnToMainView(); // Ricarica la vista principale per riflettere le modifiche
+    });
+}
+
 
         function getButtonClass(status) {
             switch(status) {
