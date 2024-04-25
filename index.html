@@ -232,7 +232,7 @@ function displayScootersByReturnDate() {
             .forEach(scooter => {
                 const scooterButton = document.createElement('button');
                 scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-                let buttonText = `${scooter.name} - ${scooter.status}`;
+                let buttonText = `${scooter.name} - ${scooter.status} - Giorni rimasti: ${scooter.daysRemaining}`;
                 if (scooter.returnTime) {
                     buttonText += ` - Rientra: ${scooter.returnTime}`;
                 } else {
