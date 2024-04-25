@@ -211,13 +211,25 @@
 
 function displayScootersByReturnDate() {
     dbRefScooters.off('value');
-    dbRefScooters.orderByChild('returnTime').on('value', snapshot => {
+    dbRefScooters.orderByChild('daysRemaining').on('value', snapshot => {
         const scooters = snapshot.val();
         const container = document.getElementById('scooterList');
         container.innerHTML = '';
         Object.keys(scooters)
             .map(key => ({ key, ...scooters[key] }))
             .sort((a, b) => {
+                // Tieni gli scooter non disponibili sempre ultimi
+                if (a.status === 'non_disponibile' && b.status !== 'non_disponibile') {
+                    return 1; // a viene dopo b
+                }
+                if (b.status === 'non_disponibile' && a.status !== 'non_disponibile') {
+                    return -1; // a viene prima di b
+                }
+                // Ordina per giorni rimasti
+                if (a.daysRemaining !== b.daysRemaining) {
+                    return a.daysRemaining - b.daysRemaining;
+                }
+                // Se i giorni sono uguali, confronta lo stato
                 const statusPriority = {
                     'disponibile': 1,
                     'rientra_oggi': 2,
@@ -227,6 +239,7 @@ function displayScootersByReturnDate() {
                 if (statusPriority[a.status] !== statusPriority[b.status]) {
                     return statusPriority[a.status] - statusPriority[b.status];
                 }
+                // Se anche lo stato è uguale, ordina per l'orario di rientro
                 return (a.returnTime || "23:59") < (b.returnTime || "23:59") ? -1 : 1;
             })
             .forEach(scooter => {
@@ -247,6 +260,7 @@ function displayScootersByReturnDate() {
             });
     });
 }
+
 
 
 
