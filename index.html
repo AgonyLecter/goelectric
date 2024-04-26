@@ -44,7 +44,7 @@
         <div id="notifications">Prenotazioni di oggi:</div>
         <div id="scooterList" class="w-100 row"></div>
         <button class="btn btn-secondary mt-3" id="returnButton" style="display:none;">Torna alla vista principale</button>
-        <div id="footer" class="mt-3 text-secondary"> &reg;ScrittoMatitato&Inchiostrato by MichaeldettoDamianodettoFabrizio </div>
+        <div id="footer" class="mt-3 text-secondary"> &reg;Licenza unica GoElectric </div>
     </div>
 
     <div class="modal" tabindex="-1" role="dialog" id="manageScooterModal">
@@ -191,23 +191,23 @@ function updateDateTime() {
     });
 }
 
-        function loadScooters() {
-    dbRefScooters.on('value', snapshot => {
+function loadScooters() {
+    dbRefScooters.orderByChild('name').on('value', snapshot => {
+        if (!snapshot.exists()) {
+            console.log("No scooters found.");
+            return;
+        }
+
         const data = snapshot.val();
         const container = document.getElementById('scooterList');
         container.innerHTML = '';
-        Object.keys(data).forEach((key, index) => {
+        Object.keys(data).forEach(key => {
             const scooter = data[key];
             const scooterButton = document.createElement('button');
             scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-            let buttonText = `${parseInt(key) + 1}`; // Aggiungi 1 al numero dello scooter
-            if (scooter.status === 'disponibile' && scooter.daysRemaining === 0) {
-                buttonText += ` - ${scooter.status}`;
-            } else {
-                buttonText += ` - Giorni rimasti: ${scooter.daysRemaining}`;
-            }
+            let buttonText = `${scooter.name} - Giorni rimasti: ${scooter.daysRemaining}`;
             if (scooter.returnTime) {
-                buttonText += ` - Rientra: ${scooter.returnTime}`;
+                buttonText += `, Rientra alle: ${scooter.returnTime}`;
             }
             scooterButton.textContent = buttonText;
             scooterButton.onclick = () => {
@@ -221,6 +221,11 @@ function updateDateTime() {
 
 
 
+
+
+
+
+
         function formatScooterNumber(scooterName) {
             // Se il numero è inferiore a 10, aggiungi lo zero iniziale
             const number = parseInt(scooterName.replace('scooter#', ''), 10);
@@ -228,26 +233,12 @@ function updateDateTime() {
         }
 
         function displayScootersByReturnDate() {
-    dbRefScooters.off('value');
-    dbRefScooters.orderByChild('daysRemaining').on('value', snapshot => {
-        const scooters = snapshot.val();
+    dbRefScooters.orderByChild('returnTime').on('value', snapshot => {
+        const data = snapshot.val();
         const container = document.getElementById('scooterList');
         container.innerHTML = '';
-        Object.keys(scooters)
-            .map(key => ({ key, ...scooters[key] }))
+        Object.keys(data).map(key => data[key])
             .sort((a, b) => {
-                // Tieni gli scooter non disponibili sempre ultimi
-                if (a.status === 'non_disponibile' && b.status !== 'non_disponibile') {
-                    return 1; // a viene dopo b
-                }
-                if (b.status === 'non_disponibile' && a.status !== 'non_disponibile') {
-                    return -1; // a viene prima di b
-                }
-                // Ordina per giorni rimasti
-                if (a.daysRemaining !== b.daysRemaining) {
-                    return a.daysRemaining - b.daysRemaining;
-                }
-                // Se i giorni sono uguali, confronta lo stato
                 const statusPriority = {
                     'disponibile': 1,
                     'rientra_oggi': 2,
@@ -257,30 +248,33 @@ function updateDateTime() {
                 if (statusPriority[a.status] !== statusPriority[b.status]) {
                     return statusPriority[a.status] - statusPriority[b.status];
                 }
-                // Se anche lo stato è uguale, ordina per l'orario di rientro
-                return (a.returnTime || "23:59") < (b.returnTime || "23:59") ? -1 : 1;
+                if (a.daysRemaining !== b.daysRemaining) {
+                    return a.daysRemaining - b.daysRemaining;
+                }
+                return (a.returnTime || "").localeCompare(b.returnTime || "");
             })
-            .forEach((scooter, index) => { // Modifica forEach per accettare l'indice
+            .forEach(scooter => {
                 const scooterButton = document.createElement('button');
                 scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-                let buttonText = `${index + 1}`; // Aggiungi 1 al numero dello scooter
-                if (scooter.status === 'disponibile' && scooter.daysRemaining === 0) {
-                    buttonText += ` - ${scooter.status}`;
-                } else {
-                    buttonText += ` - Giorni rimasti: ${scooter.daysRemaining}`;
-                }
+                let buttonText = `${scooter.name} - Giorni rimasti: ${scooter.daysRemaining}`;
                 if (scooter.returnTime) {
-                    buttonText += ` - Rientra: ${scooter.returnTime}`;
+                    buttonText += `, Rientra alle: ${scooter.returnTime}`;
                 }
                 scooterButton.textContent = buttonText;
                 scooterButton.onclick = () => {
-                    currentScooterKey = scooter.key;
+                    currentScooterKey = scooter.name;
                     showManageModal(scooter);
                 };
                 container.appendChild(scooterButton);
             });
     });
 }
+
+
+
+
+
+
 
 
 
@@ -343,4 +337,6 @@ function updateDateTime() {
     </script>
 </body>
 </html>
+
+
 
