@@ -44,7 +44,7 @@
         <div id="notifications">Prenotazioni di oggi:</div>
         <div id="scooterList" class="w-100 row"></div>
         <button class="btn btn-secondary mt-3" id="returnButton" style="display:none;">Torna alla vista principale</button>
-        <div id="footer" class="mt-3 text-secondary"> &reg;Licenza unica GoElectric </div>
+        <div id="footer" class="mt-3 text-secondary"> &reg;Licenza Unica GoElectric </div>
     </div>
 
     <div class="modal" tabindex="-1" role="dialog" id="manageScooterModal">
@@ -262,13 +262,14 @@ function loadScooters() {
                 }
                 scooterButton.textContent = buttonText;
                 scooterButton.onclick = () => {
-                    currentScooterKey = scooter.name;
+                    currentScooterKey = key;
                     showManageModal(scooter);
                 };
                 container.appendChild(scooterButton);
             });
     });
 }
+
 
 
 
@@ -314,17 +315,26 @@ function loadScooters() {
         }
 
         function unlockScooter(key) {
-            dbRefScooters.child(key).update({
-                status: 'disponibile',
-                daysRemaining: 0,
-                returnTime: null  // Resettare l'orario di rientro quando lo scooter viene sbloccato
-            }).then(() => {
-                alert('Scooter sbloccato con successo.');
-                const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
+    if (key) {
+        dbRefScooters.child(key).update({
+            status: 'disponibile',
+            daysRemaining: 0,
+            returnTime: null  
+        }).then(() => {
+            alert('Scooter sbloccato con successo.');
+            const manageModal = bootstrap.Modal.getInstance(document.getElementById('manageScooterModal'));
+            if (manageModal) {
                 manageModal.hide();
-                returnToMainView(); // Ricarica la vista principale per riflettere le modifiche
-            });
-        }
+            }
+            returnToMainView();
+        }).catch(error => {
+            console.error('Errore durante lo sblocco dello scooter:', error);
+        });
+    } else {
+        console.error('Chiave dello scooter non definita.');
+    }
+}
+
 
         function getButtonClass(status) {
             switch(status) {
