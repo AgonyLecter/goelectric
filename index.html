@@ -171,24 +171,33 @@ function translateStatus(status) {
             $('#manageScooterModal').data('scooterKey', key);
         }
 
-        function submitManage() {
-            var key = $('#manageScooterModal').data('scooterKey');
-            var returnDate = document.getElementById('returnDate').value;
-            var returnTime = document.getElementById('returnTime').value || 'N/D'; // Ensure time is 'N/D' if undefined
-            var outOfService = document.getElementById('outOfService').checked;
-            var status = outOfService ? 'non_disponibile' : (returnDate && moment(returnDate).isSame(moment(), 'day')) ? 'rientra_oggi' : (returnDate && moment(returnDate).isAfter(moment(), 'day')) ? 'noleggiato' : 'disponibile';
+function submitManage() {
+    var key = $('#manageScooterModal').data('scooterKey');
+    var returnDate = document.getElementById('returnDate').value;
+    var returnTime = document.getElementById('returnTime').value || 'N/D';  // Assicurati che il tempo sia 'N/D' se non definito
+    var outOfService = document.getElementById('outOfService').checked;
 
-            var updateObj = {
-                returnDate: returnDate,
-                returnTime: returnTime,
-                status: status
-            };
+    var status = outOfService ? 'non_disponibile' : 
+                 (returnDate && moment(returnDate).isSame(moment(), 'day')) ? 'rientra_oggi' : 
+                 (returnDate && moment(returnDate).isAfter(moment(), 'day')) ? 'noleggiato' : 
+                 'disponibile';
 
-            dbRefScooters.child(key).update(updateObj).then(() => {
-                $('#manageScooterModal').modal('hide');
-                loadScooters();
-            });
-        }
+    var updateObj = {
+        status: status  // Aggiorna solo il campo status
+    };
+
+    // Se la data e l'orario di ritorno sono forniti, includili nell'aggiornamento
+    if (returnDate) {
+        updateObj.returnDate = returnDate;
+        updateObj.returnTime = returnTime;
+    }
+
+    dbRefScooters.child(key).update(updateObj).then(() => {
+        $('#manageScooterModal').modal('hide');
+        loadScooters();
+    });
+}
+
 
         function unlockScooter() {
             var key = $('#manageScooterModal').data('scooterKey');
