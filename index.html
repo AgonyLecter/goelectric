@@ -111,27 +111,31 @@
         });
 
         function checkAndUpdateScooters() {
-            const today = moment().startOf('day');
-            dbRefScooters.once('value', snapshot => {
-                const updates = {};
-                snapshot.forEach(child => {
-                    const scooter = child.val();
-                    const returnMoment = moment(scooter.returnDate);
-                    if (returnMoment.isValid()) {
-                        if (returnMoment.isBefore(today)) {
-                            updates[child.key] = { status: 'disponibile' };
-                        } else if (returnMoment.isSame(today)) {
-                            updates[child.key] = { status: 'rientra_oggi' };
-                        } else {
-                            updates[child.key] = { status: 'noleggiato' };
-                        }
-                    }
-                });
-                if (Object.keys(updates).length > 0) {
-                    dbRefScooters.update(updates).then(() => console.log('Scooters updated successfully')).catch(error => console.error('Error updating scooters:', error));
+    const today = moment().startOf('day');
+    dbRefScooters.once('value', snapshot => {
+        snapshot.forEach(child => {
+            const scooter = child.val();
+            const returnMoment = moment(scooter.returnDate);
+            let updated = false;
+            if (returnMoment.isValid()) {
+                if (returnMoment.isBefore(today)) {
+                    scooter.status = 'disponibile';
+                    updated = true;
+                } else if (returnMoment.isSame(today)) {
+                    scooter.status = 'rientra_oggi';
+                    updated = true;
+                } else if (returnMoment.isAfter(today)) {
+                    scooter.status = 'noleggiato';
+                    updated = true;
                 }
-            });
-        }
+            }
+            if (updated) {
+                dbRefScooters.child(child.key).update(scooter).then(() => console.log('Scooter updated successfully', child.key)).catch(error => console.error('Error updating scooter:', child.key, error));
+            }
+        });
+    });
+}
+
 
         function loadScooters() {
     dbRefScooters.orderByChild('order').on('value', snapshot => {
@@ -141,7 +145,7 @@
             const scooter = child.val();
             const scooterButton = document.createElement('button');
             scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-            let buttonText = `#${scooter.name} - Stato: ${translateStatus(scooter.status)}, Rientra il: ${scooter.returnDate || 'N/D'} alle ${scooter.returnTime || 'N/D'}`;
+            let buttonText = `${scooter.name} - Stato: ${translateStatus(scooter.status)}, Rientra il: ${scooter.returnDate || 'N/D'} alle ${scooter.returnTime || 'N/D'}`;
             scooterButton.textContent = buttonText;
             scooterButton.onclick = () => {
                 showManageModal(scooter, child.key);
@@ -197,20 +201,27 @@ function translateStatus(status) {
 
 
 
-        function unlockScooter() {
-            var key = $('#manageScooterModal').data('scooterKey');
-            dbRefScooters.child(key).update({
-                status: 'disponibile',
-                returnDate: null,
-                returnTime: null
-            }).then(() => {
+function unlockScooter() {
+    var key = $('#manageScooterModal').data('scooterKey');
+    dbRefScooters.child(key).once('value').then((snapshot) => {
+        var scooter = snapshot.val();
+        var updatedScooter = {
+            ...scooter,
+            status: 'disponibile',
+            returnDate: null,
+            returnTime: null
+        };
+
+        dbRefScooters.child(key).update(updatedScooter)
+            .then(() => {
                 alert('Scooter sbloccato con successo.');
                 $('#manageScooterModal').modal('hide');
                 loadScooters();
             }).catch(error => {
                 console.error('Errore durante lo sblocco dello scooter:', error);
             });
-        }
+    });
+}
 
         function updateDateTime() {
             const now = new Date();
@@ -266,6 +277,5 @@ function translateStatus(status) {
     </script>
 </body>
 </html>
-
 
 
