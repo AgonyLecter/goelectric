@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (scooter.status === 'noleggiato') {
                         buttonText += ` fino al ${scooter.returnDate} alle ${scooter.returnTime}`;
                     } else if (scooter.status === 'rientra_oggi') {
-                        buttonText += ` oggi alle ${scooter.returnTime}`;
+                        buttonText += ` alle ${scooter.returnTime}`;
                     }
                     scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
                     scooterButton.textContent = buttonText;
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (scooter.status === 'noleggiato') {
                         buttonText += ` fino al ${scooter.returnDate} alle ${scooter.returnTime}`;
                     } else if (scooter.status === 'rientra_oggi') {
-                        buttonText += ` oggi alle ${scooter.returnTime}`;
+                        buttonText += ` alle ${scooter.returnTime}`;
                     }
                     scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
                     scooterButton.textContent = buttonText;
