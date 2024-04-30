@@ -141,7 +141,7 @@
             const scooter = child.val();
             const scooterButton = document.createElement('button');
             scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-            let buttonText = `Scooter #${scooter.name} - Stato: ${translateStatus(scooter.status)}, Rientra il: ${scooter.returnDate || 'N/D'} alle ${scooter.returnTime || 'N/D'}`;
+            let buttonText = `#${scooter.name} - Stato: ${translateStatus(scooter.status)}, Rientra il: ${scooter.returnDate || 'N/D'} alle ${scooter.returnTime || 'N/D'}`;
             scooterButton.textContent = buttonText;
             scooterButton.onclick = () => {
                 showManageModal(scooter, child.key);
@@ -171,10 +171,10 @@ function translateStatus(status) {
             $('#manageScooterModal').data('scooterKey', key);
         }
 
-function submitManage() {
+        function submitManage() {
     var key = $('#manageScooterModal').data('scooterKey');
     var returnDate = document.getElementById('returnDate').value;
-    var returnTime = document.getElementById('returnTime').value || 'N/D';  // Assicurati che il tempo sia 'N/D' se non definito
+    var returnTime = document.getElementById('returnTime').value;
     var outOfService = document.getElementById('outOfService').checked;
 
     var status = outOfService ? 'non_disponibile' : 
@@ -182,14 +182,11 @@ function submitManage() {
                  (returnDate && moment(returnDate).isAfter(moment(), 'day')) ? 'noleggiato' : 
                  'disponibile';
 
-    var updateObj = {
-        status: status  // Aggiorna solo il campo status
-    };
+    var updateObj = { status: status };
 
-    // Se la data e l'orario di ritorno sono forniti, includili nell'aggiornamento
     if (returnDate) {
-        updateObj.returnDate = returnDate;
-        updateObj.returnTime = returnTime;
+        updateObj.returnDate = returnDate;  // Aggiorna la data di ritorno solo se fornita
+        updateObj.returnTime = returnTime || 'N/D';  // Aggiorna l'ora di ritorno solo se fornita
     }
 
     dbRefScooters.child(key).update(updateObj).then(() => {
@@ -197,6 +194,7 @@ function submitManage() {
         loadScooters();
     });
 }
+
 
 
         function unlockScooter() {
