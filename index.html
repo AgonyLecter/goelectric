@@ -115,19 +115,24 @@
     dbRefScooters.once('value', snapshot => {
         snapshot.forEach(child => {
             const scooter = child.val();
-            const returnMoment = moment(scooter.returnDate);
             let updated = false;
-            if (returnMoment.isValid()) {
-                if (returnMoment.isBefore(today)) {
-                    scooter.status = 'disponibile';
-                    updated = true;
-                } else if (returnMoment.isSame(today)) {
-                    scooter.status = 'rientra_oggi';
-                    updated = true;
-                } else if (returnMoment.isAfter(today)) {
-                    scooter.status = 'noleggiato';
-                    updated = true;
+            if (scooter.returnDate) {
+                const returnMoment = moment(scooter.returnDate);
+                if (returnMoment.isValid()) {
+                    if (returnMoment.isBefore(today)) {
+                        scooter.status = 'disponibile';
+                        updated = true;
+                    } else if (returnMoment.isSame(today)) {
+                        scooter.status = 'rientra_oggi';
+                        updated = true;
+                    } else if (returnMoment.isAfter(today)) {
+                        scooter.status = 'noleggiato';
+                        updated = true;
+                    }
                 }
+            } else {  // Se non c'è una data di ritorno, lo scooter deve rimanere disponibile
+                scooter.status = 'disponibile';
+                updated = true;
             }
             if (updated) {
                 dbRefScooters.child(child.key).update(scooter).then(() => console.log('Scooter updated successfully', child.key)).catch(error => console.error('Error updating scooter:', child.key, error));
@@ -137,7 +142,9 @@
 }
 
 
-        function loadScooters() {
+
+
+function loadScooters() {
     dbRefScooters.orderByChild('order').on('value', snapshot => {
         const container = document.getElementById('scooterList');
         container.innerHTML = '';
@@ -145,7 +152,10 @@
             const scooter = child.val();
             const scooterButton = document.createElement('button');
             scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
-            let buttonText = `${scooter.name} - Stato: ${translateStatus(scooter.status)}, Rientra il: ${scooter.returnDate || 'N/D'} alle ${scooter.returnTime || 'N/D'}`;
+            let buttonText = `${scooter.name} - Stato: ${translateStatus(scooter.status)}`;
+            if (scooter.status !== 'disponibile') {
+                buttonText += `, Rientra il: ${scooter.returnDate || 'N/D'} alle ${scooter.returnTime || 'N/D'}`;
+            }
             scooterButton.textContent = buttonText;
             scooterButton.onclick = () => {
                 showManageModal(scooter, child.key);
@@ -154,6 +164,7 @@
         });
     });
 }
+
 
 function translateStatus(status) {
     switch(status) {
@@ -277,5 +288,4 @@ function unlockScooter() {
     </script>
 </body>
 </html>
-
 
