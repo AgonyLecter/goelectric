@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const scooterButton = document.createElement('button');
                     let buttonText = `${scooter.name} - ${translateStatus(scooter.status)}`;
                     if (scooter.status === 'noleggiato') {
-                        buttonText += ` fino al ${scooter.returnDate} alle ${scooter.returnTime}`;
+                        buttonText += ` al ${scooter.returnDate} alle ${scooter.returnTime}`;
                     } else if (scooter.status === 'rientra_oggi') {
                         buttonText += ` alle ${scooter.returnTime}`;
                     }
@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const scooterButton = document.createElement('button');
                     let buttonText = `${scooter.name} - ${translateStatus(scooter.status)}`;
                     if (scooter.status === 'noleggiato') {
-                        buttonText += ` fino al ${scooter.returnDate} alle ${scooter.returnTime}`;
+                        buttonText += ` al ${scooter.returnDate} alle ${scooter.returnTime}`;
                     } else if (scooter.status === 'rientra_oggi') {
                         buttonText += ` alle ${scooter.returnTime}`;
                     }
