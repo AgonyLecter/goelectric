@@ -94,20 +94,44 @@
             measurementId: "G-6FZQSDWEZJ"
         };
         firebase.initializeApp(firebaseConfig);
+        const dbRef = firebase.database().ref('reservations');
+
         const dbRefScooters = firebase.database().ref('scooters');
 
         document.addEventListener('DOMContentLoaded', function() {
-            loadScooters();
-            setInterval(updateDateTime, 1000);
-            $('#sortByReturnButton').click(function() {
-                displayScootersByReturnDate();
-                $('#returnButton').show();
-            });
-            $('#returnButton').click(function() {
-                loadScooters();
-                $('#returnButton').hide();
-            });
-        });
+    checkAndUpdateScooters(); // Controlla e aggiorna gli stati degli scooter
+    loadScooters(); // Carica gli scooter
+    loadTodayReservations(); // Carica le prenotazioni di oggi
+    setInterval(updateDateTime, 1000); // Aggiorna la data e ora ogni secondo
+
+    $('#sortByReturnButton').click(function() {
+        displayScootersByReturnDate();
+        $('#returnButton').show();
+    });
+
+    $('#returnButton').click(function() {
+        loadScooters();
+        $('#returnButton').hide();
+    });
+});
+function loadTodayReservations() {
+    const today = moment().format('YYYY-MM-DD'); // Formatta la data odierna
+    dbRef.orderByChild('date').equalTo(today).on('value', snapshot => {
+    const reservations = snapshot.val() || {};
+    const list = document.getElementById('todayReservationsList');
+    list.innerHTML = '';
+    Object.keys(reservations).forEach(key => {
+        const reservation = reservations[key];
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.textContent = `Cliente: ${reservation.customerName}, Numero di scooter: ${reservation.scooterCount}, Orario: ${reservation.time}${reservation.delivery ? ', Consegna a: ' + reservation.address : ''}`;
+        list.appendChild(li);
+    });
+});
+
+}
+
+
         function checkAndUpdateScooters() {
     const today = moment().startOf('day');
     dbRefScooters.once('value', snapshot => {
@@ -276,4 +300,3 @@ document.addEventListener('DOMContentLoaded', function() {
     </script>
 </body>
 </html>
-
