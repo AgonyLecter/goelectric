@@ -99,10 +99,16 @@
         const dbRefScooters = firebase.database().ref('scooters');
 
         document.addEventListener('DOMContentLoaded', function() {
-    checkAndUpdateScooters(); // Controlla e aggiorna gli stati degli scooter
+    checkAndUpdateScooters(); // Controlla e aggiorna gli stati degli scooter al caricamento della pagina
     loadScooters(); // Carica gli scooter
     loadTodayReservations(); // Carica le prenotazioni di oggi
     setInterval(updateDateTime, 1000); // Aggiorna la data e ora ogni secondo
+
+    // Aggiorna continuamente gli stati degli scooter ogni minuto
+    setInterval(() => {
+        checkAndUpdateScooters();
+        loadScooters(); // Ricarica la visualizzazione degli scooter
+    }, 60000); // Esegue ogni minuto
 
     $('#sortByReturnButton').click(function() {
         displayScootersByReturnDate();
@@ -114,6 +120,7 @@
         $('#returnButton').hide();
     });
 });
+
 function loadTodayReservations() {
     const today = moment().format('YYYY-MM-DD'); // Formatta la data odierna
     dbRef.orderByChild('date').equalTo(today).on('value', snapshot => {
