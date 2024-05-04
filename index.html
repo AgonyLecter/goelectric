@@ -33,22 +33,27 @@
         .out-of-service { background-color: #6c757d; }
         .modal-content { font-family: 'Roboto', sans-serif; }
         .status-counter {
-            display: flex;
-            justify-content: space-around;
-            padding: 10px;
-            background: #fff;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .status-counter p {
-            margin: 0;
-            font-size: 16px;
-        }
-        .status-counter span {
-            font-weight: bold;
-            color: #333;
-        }
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background: #fff;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    margin-bottom: 30px; /* Aumentato il margine inferiore */
+}
+
+.status-counter p {
+    margin: 0;
+    font-size: 16px;
+}
+
+.status-counter p span {
+    margin-right: 10px; /* Aggiunge uno spazio tra la parola e il numero */
+    font-weight: bold;
+    color: #333;
+}
+
+
     </style>
 </head>
 <body>
@@ -61,10 +66,10 @@
         <div id="currentDateTime"></div>
         <div id="notifications">Prenotazioni di oggi:</div>
         <div id="scooterStatusCount" class="status-counter">
-            <p>Disponibili: <span id="availableCount">0</span></p>
-            <p>Rientra Oggi: <span id="returnTodayCount">0</span></p>
-            <p>Noleggiati: <span id="rentedCount">0</span></p>
-            <p>Non Disponibili: <span id="outOfServiceCount">0</span></p>
+            <p>Disponibili:<span id="availableCount">0</span></p>
+            <p>Rientra Oggi:<span id="returnTodayCount">0</span></p>
+            <p>Noleggiati:<span id="rentedCount">0</span></p>
+            <p>Non Disponibili:<span id="outOfServiceCount">0</span></p>
         </div>
         <ul id="todayReservationsList" class="list-group w-100"></ul>
         <div id="scooterList" class="w-100 row"></div>
