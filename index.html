@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Scooter GoElectric</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet"> <!-- flatpickr CSS -->
-
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
     <link rel="icon" href="logo.ico">
     <style>
         body {
@@ -18,7 +17,7 @@
             height: auto;
             margin-bottom: 20px;
         }
-        #currentDateTime, #notifications {
+        #currentDateTime, #notifications, #scooterStatusCount {
             font-size: 18px;
             margin-bottom: 20px;
         }
@@ -33,6 +32,23 @@
         .btn-danger { background-color: #dc3545; }
         .out-of-service { background-color: #6c757d; }
         .modal-content { font-family: 'Roboto', sans-serif; }
+        .status-counter {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .status-counter p {
+            margin: 0;
+            font-size: 16px;
+        }
+        .status-counter span {
+            font-weight: bold;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -44,6 +60,12 @@
         </div>
         <div id="currentDateTime"></div>
         <div id="notifications">Prenotazioni di oggi:</div>
+        <div id="scooterStatusCount" class="status-counter">
+            <p>Disponibili: <span id="availableCount">0</span></p>
+            <p>Rientra Oggi: <span id="returnTodayCount">0</span></p>
+            <p>Noleggiati: <span id="rentedCount">0</span></p>
+            <p>Non Disponibili: <span id="outOfServiceCount">0</span></p>
+        </div>
         <ul id="todayReservationsList" class="list-group w-100"></ul>
         <div id="scooterList" class="w-100 row"></div>
         <button class="btn btn-secondary mt-3" id="returnButton" style="display:none;">Torna alla vista principale</button>
@@ -87,32 +109,6 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <script>
-document.addEventListener('DOMContentLoaded', function() {
-    flatpickr("#returnTime", {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: "H:i",
-        time_24hr: true,
-        allowInput: true,
-        onOpen: function(selectedDates, dateStr, instance) {
-            instance.input.select(); // Seleziona tutto il testo all'apertura del picker
-        },
-        onReady: function(selectedDates, dateStr, instance) {
-            instance.input.addEventListener('input', function(e) {
-                let value = e.target.value;
-                // Elimina tutti i caratteri non numerici eccetto i due punti
-                value = value.replace(/[^0-9:]/g, '');
-                // Verifica e inserisce i due punti se necessario
-                if (value.match(/^\d{2}$/) && !value.includes(':')) {
-                    value += ':';
-                } else if (value.match(/^\d{2}:\d{2}$/)) {
-                    value = value.slice(0, 5); // Limita a HH:mm
-                }
-                e.target.value = value; // Aggiorna il valore visualizzato
-            });
-        }
-    });
-        });
         var firebaseConfig = {
             apiKey: "AIzaSyC346gJHt-Dg7_bjzYw7k1D6j0tcalxht4",
             authDomain: "goelectric-e9299.firebaseapp.com",
@@ -124,92 +120,71 @@ document.addEventListener('DOMContentLoaded', function() {
             measurementId: "G-6FZQSDWEZJ"
         };
         firebase.initializeApp(firebaseConfig);
-        const dbRef = firebase.database().ref('reservations');
 
+        const dbRef = firebase.database().ref('reservations');
         const dbRefScooters = firebase.database().ref('scooters');
 
         document.addEventListener('DOMContentLoaded', function() {
-    checkAndUpdateScooters(); // Controlla e aggiorna gli stati degli scooter al caricamento della pagina
-    loadScooters(); // Carica gli scooter
-    loadTodayReservations(); // Carica le prenotazioni di oggi
-    setInterval(updateDateTime, 1000); // Aggiorna la data e ora ogni secondo
+            checkAndUpdateScooters();
+            loadScooters();
+            loadTodayReservations();
+            setInterval(updateDateTime, 1000);
 
-    // Aggiorna continuamente gli stati degli scooter ogni minuto
-    setInterval(() => {
-        checkAndUpdateScooters();
-        loadScooters(); // Ricarica la visualizzazione degli scooter
-    }, 60000); // Esegue ogni minuto
+            $('#sortByReturnButton').click(function() {
+                displayScootersByReturnDate();
+                $('#returnButton').show();
+            });
 
-    $('#sortByReturnButton').click(function() {
-        displayScootersByReturnDate();
-        $('#returnButton').show();
-    });
+            $('#returnButton').click(function() {
+                loadScooters();
+                $('#returnButton').hide();
+            });
+        });
 
-    $('#returnButton').click(function() {
-        loadScooters();
-        $('#returnButton').hide();
-    });
-});
-
-function loadTodayReservations() {
-    const today = moment().format('YYYY-MM-DD'); // Formatta la data odierna
-    dbRef.orderByChild('date').equalTo(today).on('value', snapshot => {
-    const reservations = snapshot.val() || {};
-    const list = document.getElementById('todayReservationsList');
-    list.innerHTML = '';
-    Object.keys(reservations).forEach(key => {
-        const reservation = reservations[key];
-        const li = document.createElement('li');
-        li.className = 'list-group-item';
-        li.textContent = `Cliente: ${reservation.customerName}, Numero di scooter: ${reservation.scooterCount}, Orario: ${reservation.time}${reservation.delivery ? ', Consegna a: ' + reservation.address : ''}`;
-        list.appendChild(li);
-    });
-});
-
-}
-
+        function loadTodayReservations() {
+            const today = moment().format('YYYY-MM-DD');
+            dbRef.orderByChild('date').equalTo(today).on('value', snapshot => {
+                const reservations = snapshot.val() || {};
+                const list = document.getElementById('todayReservationsList');
+                list.innerHTML = '';
+                Object.keys(reservations).forEach(key => {
+                    const reservation = reservations[key];
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = `Cliente: ${reservation.customerName}, Numero di scooter: ${reservation.scooterCount}, Orario: ${reservation.time}${reservation.delivery ? ', Consegna a: ' + reservation.address : ''}`;
+                    list.appendChild(li);
+                });
+            });
+        }
 
         function checkAndUpdateScooters() {
-    const today = moment().startOf('day');
-    dbRefScooters.once('value', snapshot => {
-        snapshot.forEach(child => {
-            const scooter = child.val();
-            let status = scooter.status; // Prendi lo stato corrente dello scooter
-            if (scooter.returnDate) {
-                const returnDate = moment(scooter.returnDate, "YYYY-MM-DD");
-                if (returnDate.isBefore(today, 'day')) {
-                    status = 'disponibile';
-                } else if (returnDate.isSame(today, 'day')) {
-                    status = 'rientra_oggi';
-                } else {
-                    status = 'noleggiato';
-                }
-            }
+            const today = moment().startOf('day');
+            dbRefScooters.once('value', snapshot => {
+                snapshot.forEach(child => {
+                    const scooter = child.val();
+                    let status = scooter.status;
+                    if (scooter.returnDate) {
+                        const returnDate = moment(scooter.returnDate, "YYYY-MM-DD");
+                        if (returnDate.isBefore(today, 'day')) {
+                            status = 'disponibile';
+                        } else if (returnDate.isSame(today, 'day')) {
+                            status = 'rientra_oggi';
+                        } else {
+                            status = 'noleggiato';
+                        }
+                    }
 
-            if (status !== scooter.status) { // Verifica se lo stato è cambiato
-                dbRefScooters.child(child.key).update({status: status});
-            }
-        });
-    }).then(() => {
-        loadScooters(); // Ricarica gli scooter dopo l'aggiornamento degli stati
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    checkAndUpdateScooters(); // Controlla e aggiorna gli scooter al caricamento della pagina
-    setInterval(updateDateTime, 1000);
-    $('#sortByReturnButton').click(function() {
-        displayScootersByReturnDate();
-        $('#returnButton').show();
-    });
-    $('#returnButton').click(function() {
-        loadScooters();
-        $('#returnButton').hide();
-    });
-});
-
+                    if (status !== scooter.status) {
+                        dbRefScooters.child(child.key).update({status: status});
+                    }
+                });
+            }).then(() => {
+                loadScooters();
+            });
+        }
 
         function loadScooters() {
+            let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0;
             dbRefScooters.orderByChild('order').on('value', snapshot => {
                 const container = document.getElementById('scooterList');
                 container.innerHTML = '';
@@ -230,7 +205,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     };
                     container.appendChild(scooterButton);
+
+                    switch (scooter.status) {
+                        case 'disponibile': availableCount++; break;
+                        case 'rientra_oggi': returnTodayCount++; break;
+                        case 'noleggiato': rentedCount++; break;
+                        case 'non_disponibile': outOfServiceCount++; break;
+                    }
                 });
+                document.getElementById('availableCount').textContent = availableCount;
+                document.getElementById('returnTodayCount').textContent = returnTodayCount;
+                document.getElementById('rentedCount').textContent = rentedCount;
+                document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
             });
         }
 
