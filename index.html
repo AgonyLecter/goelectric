@@ -67,7 +67,7 @@
         <div id="notifications">Prenotazioni di oggi:</div>
         <div id="scooterStatusCount" class="status-counter">
             <p>Disponibili:<span id="availableCount">0</span></p>
-            <p>Rientri:<span id="returnTodayCount">0</span></p>
+            <p>Rientro:<span id="returnTodayCount">0</span></p>
             <p>Noleggiati:<span id="rentedCount">0</span></p>
             <p>NonDisp:<span id="outOfServiceCount">0</span></p>
         </div>
@@ -235,17 +235,33 @@
         }
 
         function submitManage() {
-            var key = $('#manageScooterModal').data('scooterKey');
-            var returnDate = $('#returnDate').val();
-            var returnTime = $('#returnTime').val();
-            var outOfService = $('#outOfService').is(':checked');
-            var status = outOfService ? 'non_disponibile' : (returnDate && moment(returnDate).isSame(moment(), 'day')) ? 'rientra_oggi' : (returnDate && moment(returnDate).isAfter(moment(), 'day')) ? 'noleggiato' : 'disponibile';
-            var updateObj = { status: status, returnDate: returnDate || null, returnTime: returnTime || null };
-            dbRefScooters.child(key).update(updateObj).then(() => {
-                $('#manageScooterModal').modal('hide');
-                loadScooters();
-            });
-        }
+    var key = $('#manageScooterModal').data('scooterKey');
+    var returnDate = $('#returnDate').val();
+    var returnTime = $('#returnTime').val();
+    var outOfService = $('#outOfService').is(':checked');
+
+    var newStatus = outOfService ? 'non_disponibile' : (returnDate && moment(returnDate).isSame(moment(), 'day')) ? 'rientra_oggi' : (returnDate && moment(returnDate).isAfter(moment(), 'day')) ? 'noleggiato' : 'disponibile';
+
+    var updateObj = {
+        status: newStatus,
+        returnDate: null, // Resetta sempre la data di ritorno
+        returnTime: null  // Resetta sempre l'ora di ritorno
+    };
+
+    // Aggiungiamo le date solo se lo status lo richiede
+    if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
+        updateObj.returnDate = returnDate;
+        updateObj.returnTime = returnTime;
+    }
+
+    dbRefScooters.child(key).update(updateObj).then(() => {
+        $('#manageScooterModal').modal('hide');
+        loadScooters();
+    }).catch(error => {
+        console.error('Errore durante aggiornamento dello scooter:', error);
+    });
+}
+
 
         function unlockScooter() {
             var key = $('#manageScooterModal').data('scooterKey');
