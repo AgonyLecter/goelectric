@@ -234,24 +234,28 @@
             $('#manageScooterModal').data('scooterKey', key);
         }
 
-        function submitManage() {
+function submitManage() {
     var key = $('#manageScooterModal').data('scooterKey');
     var returnDate = $('#returnDate').val();
     var returnTime = $('#returnTime').val();
     var outOfService = $('#outOfService').is(':checked');
 
-    var newStatus = outOfService ? 'non_disponibile' : (returnDate && moment(returnDate).isSame(moment(), 'day')) ? 'rientra_oggi' : (returnDate && moment(returnDate).isAfter(moment(), 'day')) ? 'noleggiato' : 'disponibile';
+    // Determina il nuovo status in base ai valori inseriti
+    var newStatus = outOfService ? 'non_disponibile' : 
+                    (returnDate && moment(returnDate, "YYYY-MM-DD").isSame(moment(), 'day')) ? 'rientra_oggi' : 
+                    (returnDate && moment(returnDate, "YYYY-MM-DD").isAfter(moment(), 'day')) ? 'noleggiato' : 'disponibile';
 
     var updateObj = {
-        status: newStatus,
-        returnDate: null, // Resetta sempre la data di ritorno
-        returnTime: null  // Resetta sempre l'ora di ritorno
+        status: newStatus
     };
 
-    // Aggiungiamo le date solo se lo status lo richiede
+    // Aggiorna le date solo se necessario
     if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
         updateObj.returnDate = returnDate;
         updateObj.returnTime = returnTime;
+    } else {
+        updateObj.returnDate = null; // Resetta la data di ritorno se lo scooter diventa disponibile
+        updateObj.returnTime = null; // Resetta l'ora di ritorno se lo scooter diventa disponibile
     }
 
     dbRefScooters.child(key).update(updateObj).then(() => {
@@ -261,6 +265,7 @@
         console.error('Errore durante aggiornamento dello scooter:', error);
     });
 }
+
 
 
         function unlockScooter() {
