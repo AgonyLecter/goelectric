@@ -1,0 +1,19 @@
+{
+    "name": "Gestione Scooter GoElectric",
+    "short_name": "GoElectric",
+    "start_url": "index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#007bff",
+    "description": "Gestione Scooter per GoElectric",
+    "icons": [
+      {
+        "src": "logo.png",
+        "sizes": "150x150",
+        "type": "image/png"
+      }
+    ]
+  }
+  
+  
+  
