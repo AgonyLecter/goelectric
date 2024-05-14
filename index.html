@@ -92,7 +92,7 @@
             margin: 1.5rem 0 0 !important;
         }
         .swal2-styled.swal2-confirm {
-            background-color: #007bff;
+            background-color: #00ff15;
             color: #fff;
         }
         .swal2-styled.swal2-cancel {
@@ -263,12 +263,16 @@
                         <input type="checkbox" id="outOfService">
                         <label for="outOfService">Non disponibile</label>
                     </div>
-                    <button type="button" class="swal2-confirm swal2-styled" style="background-color: #28a745;" onclick="unlockScooter('${key}')">Sblocca Scooter</button>
+                    <button type="button" class="swal2-confirm swal2-styled" style="background-color: #17a2b8;" onclick="unlockScooter('${key}')">Sblocca Scooter</button>
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'Conferma',
                 cancelButtonText: 'Annulla',
                 focusConfirm: false,
+                customClass: {
+                    confirmButton: 'btn-success',
+                    cancelButton: 'btn-danger'
+                },
                 didOpen: () => {
                     document.getElementById('returnDate').value = scooter.returnDate || '';
                     document.getElementById('returnTime').value = scooter.returnTime || '';
@@ -278,6 +282,11 @@
                     var returnDate = document.getElementById('returnDate').value;
                     var returnTime = document.getElementById('returnTime').value;
                     var outOfService = document.getElementById('outOfService').checked;
+
+                    if (outOfService && (returnDate || returnTime)) {
+                        Swal.showValidationMessage('Per favore, deseleziona "Non disponibile" per impostare una data di rientro e un orario.');
+                        return false;
+                    }
 
                     var newStatus = outOfService ? 'non_disponibile' :
                                     (returnDate && moment(returnDate, "YYYY-MM-DD").isSame(moment(), 'day')) ? 'rientra_oggi' :
