@@ -236,6 +236,9 @@
                     } else if (scooter.status === 'rientra_oggi') {
                         buttonText += ` alle ${scooter.returnTime}`;
                     }
+                    if (scooter.pickUp) {
+                        buttonText += ' (Pick Up)';
+                    }
                     scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
                     scooterButton.textContent = buttonText;
                     scooterButton.onclick = () => {
@@ -271,6 +274,10 @@
                         <input type="checkbox" id="outOfService">
                         <label for="outOfService">Non disponibile</label>
                     </div>
+                    <div class="swal2-checkbox">
+                        <input type="checkbox" id="pickUp">
+                        <label for="pickUp">Pick Up</label>
+                    </div>
                     <button type="button" class="swal2-confirm swal2-styled" style="background-color: #17a2b8;" onclick="unlockScooter('${key}')">Sblocca Scooter</button>
                 `,
                 showCancelButton: true,
@@ -285,11 +292,13 @@
                     document.getElementById('returnDate').value = scooter.returnDate || '';
                     document.getElementById('returnTime').value = scooter.returnTime || '';
                     document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
+                    document.getElementById('pickUp').checked = scooter.pickUp || false;
                 },
                 preConfirm: () => {
                     var returnDate = document.getElementById('returnDate').value;
                     var returnTime = document.getElementById('returnTime').value;
                     var outOfService = document.getElementById('outOfService').checked;
+                    var pickUp = document.getElementById('pickUp').checked;
 
                     if (outOfService && (returnDate || returnTime)) {
                         Swal.showValidationMessage('Per favore, deseleziona "Non disponibile" per impostare una data di rientro e un orario.');
@@ -301,7 +310,8 @@
                                     (returnDate && moment(returnDate, "YYYY-MM-DD").isAfter(moment(), 'day')) ? 'noleggiato' : 'disponibile';
 
                     var updateObj = {
-                        status: newStatus
+                        status: newStatus,
+                        pickUp: pickUp
                     };
 
                     if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
@@ -341,7 +351,8 @@
             dbRefScooters.child(key).update({
                 status: 'disponibile',
                 returnDate: null,
-                returnTime: null
+                returnTime: null,
+                pickUp: false
             }).then(() => {
                 Swal.fire({
                     icon: 'success',
@@ -413,6 +424,9 @@
                         buttonText += ` al ${scooter.returnDate} alle ${scooter.returnTime}`;
                     } else if (scooter.status === 'rientra_oggi') {
                         buttonText += ` alle ${scooter.returnTime}`;
+                    }
+                    if (scooter.pickUp) {
+                        buttonText += ' (Pick Up)';
                     }
                     scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
                     scooterButton.textContent = buttonText;
