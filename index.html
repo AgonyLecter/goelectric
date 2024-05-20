@@ -207,13 +207,14 @@
 
                     let updates = {status: status};
 
-                    // Reset returnDate and returnTime if status becomes "disponibile"
+                    // Reset all data if status becomes "disponibile"
                     if (status === 'disponibile') {
                         updates.returnDate = null;
                         updates.returnTime = null;
+                        updates.pickUp = false;
                     }
 
-                    if (status !== scooter.status || updates.returnDate !== scooter.returnDate || updates.returnTime !== scooter.returnTime) {
+                    if (status !== scooter.status || updates.returnDate !== scooter.returnDate || updates.returnTime !== scooter.returnTime || updates.pickUp !== scooter.pickUp) {
                         dbRefScooters.child(child.key).update(updates);
                     }
                 });
@@ -305,6 +306,11 @@
                         return false;
                     }
 
+                    if (pickUp && !returnDate && !returnTime) {
+                        Swal.showValidationMessage('Per favore, imposta una data e un orario di rientro per il Pick Up.');
+                        return false;
+                    }
+
                     var newStatus = outOfService ? 'non_disponibile' :
                                     (returnDate && moment(returnDate, "YYYY-MM-DD").isSame(moment(), 'day')) ? 'rientra_oggi' :
                                     (returnDate && moment(returnDate, "YYYY-MM-DD").isAfter(moment(), 'day')) ? 'noleggiato' : 'disponibile';
@@ -320,6 +326,7 @@
                     } else {
                         updateObj.returnDate = null;
                         updateObj.returnTime = null;
+                        updateObj.pickUp = false;
                     }
 
                     return {
@@ -450,4 +457,5 @@
     </script>
 </body>
 </html>
+
 
