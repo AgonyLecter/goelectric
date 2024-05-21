@@ -1,5 +1,3 @@
-// service-worker.js
-
 const CACHE_NAME = 'goelectric-cache-v1';
 const urlsToCache = [
   '/',
