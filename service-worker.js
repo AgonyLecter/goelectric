@@ -55,7 +55,14 @@ self.addEventListener('activate', function(event) {
       );
     })
   );
+  return self.clients.claim();
 });
 
+// Gestione dell'aggiornamento del Service Worker
+self.addEventListener('message', function(event) {
+  if (event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
 
   
