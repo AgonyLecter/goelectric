@@ -112,7 +112,7 @@
 </head>
 <body>
     <div class="container d-flex flex-column align-items-center">
-        <img src="logo.ico" class="logo mb-3" alt="GoElectric Logo">
+        <img src="logo.png" class="logo mb-3" alt="GoElectric Logo">
         <div id="navMenu" class="mb-3 d-flex justify-content-center">
             <a href="reservations.html" class="btn btn-primary">Reservations</a>
             <button class="btn btn-info" id="sortByReturnButton" onclick="toggleView()">Ordina per Rientri</button>
@@ -260,7 +260,8 @@
                     ...updates,
                     returnDate: null,
                     returnTime: null,
-                    pickUp: false
+                    pickUp: false,
+                    hotelName: null
                 };
             }
             return updates;
@@ -271,7 +272,8 @@
                 updates.status !== scooter.status ||
                 updates.returnDate !== scooter.returnDate ||
                 updates.returnTime !== scooter.returnTime ||
-                updates.pickUp !== scooter.pickUp
+                updates.pickUp !== scooter.pickUp ||
+                updates.hotelName !== scooter.hotelName
             );
         }
 
@@ -307,6 +309,9 @@
             if (scooter.pickUp) {
                 buttonText += ' (Pick Up)';
             }
+            if (scooter.hotelName) {
+                buttonText += ` - Hotel: ${scooter.hotelName}`;
+            }
             scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
             scooterButton.textContent = buttonText;
             scooterButton.onclick = () => {
@@ -332,6 +337,10 @@
                     <input type="date" id="returnDate" class="swal2-input">
                     <label for="returnTime">Ora di Rientro:</label>
                     <input type="time" id="returnTime" class="swal2-input">
+                    <div id="hotelNameContainer" style="display: none;">
+                        <label for="hotelName">Nome dell'Hotel:</label>
+                        <input type="text" id="hotelName" class="swal2-input">
+                    </div>
                     <div class="swal2-checkbox">
                         <input type="checkbox" id="outOfService">
                         <label for="outOfService">Non disponibile</label>
@@ -340,7 +349,7 @@
                         <input type="checkbox" id="pickUp">
                         <label for="pickUp">Pick Up</label>
                     </div>
-                    <button type="button" class="swal2-confirm swal2-styled" style="background-color: #17a2b8;" onclick="unlockScooter('${key}')">Sblocca Scooter</button>
+                    <button type="button" id="unlockScooterButton" class="swal2-confirm swal2-styled" style="background-color: #17a2b8;">Sblocca Scooter</button>
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'Conferma',
@@ -353,11 +362,59 @@
                 didOpen: () => {
                     document.getElementById('returnDate').value = scooter.returnDate || '';
                     document.getElementById('returnTime').value = scooter.returnTime || '';
+                    document.getElementById('hotelName').value = scooter.hotelName || '';
                     document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
                     document.getElementById('pickUp').checked = scooter.pickUp || false;
+                    document.getElementById('pickUp').addEventListener('change', (event) => {
+                        document.getElementById('hotelNameContainer').style.display = event.target.checked ? 'block' : 'none';
+                    });
+                    if (scooter.pickUp) {
+                        document.getElementById('hotelNameContainer').style.display = 'block';
+                    }
+                    document.getElementById('unlockScooterButton').addEventListener('click', () => {
+                        unlockScooter(key);
+                        Swal.close();
+                    });
                 },
                 preConfirm: () => {
-                    return handlePreConfirm(scooter, key);
+                    const returnDate = document.getElementById('returnDate').value;
+                    const returnTime = document.getElementById('returnTime').value;
+                    const hotelName = document.getElementById('pickUp').checked ? document.getElementById('hotelName').value : null;
+                    const outOfService = document.getElementById('outOfService').checked;
+                    const pickUp = document.getElementById('pickUp').checked;
+
+                    if (outOfService && (returnDate || returnTime)) {
+                        Swal.showValidationMessage('Per favore, deseleziona "Non disponibile" per impostare una data di rientro e un orario.');
+                        return false;
+                    }
+
+                    if (pickUp && (!returnDate || !returnTime)) {
+                        Swal.showValidationMessage('Per favore, imposta una data e un orario di rientro per il Pick Up.');
+                        return false;
+                    }
+
+                    const newStatus = determineNewStatus(outOfService, returnDate, returnTime);
+
+                    const updateObj = {
+                        status: newStatus,
+                        pickUp: pickUp,
+                        hotelName: hotelName
+                    };
+
+                    if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
+                        updateObj.returnDate = returnDate;
+                        updateObj.returnTime = returnTime;
+                    } else {
+                        updateObj.returnDate = null;
+                        updateObj.returnTime = null;
+                        updateObj.pickUp = false;
+                        updateObj.hotelName = null;
+                    }
+
+                    return {
+                        key: key,
+                        updateObj: updateObj
+                    };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -379,52 +436,19 @@
             });
         }
 
-        function handlePreConfirm(scooter, key) {
-            const returnDate = document.getElementById('returnDate').value;
-            const returnTime = document.getElementById('returnTime').value;
-            const outOfService = document.getElementById('outOfService').checked;
-            const pickUp = document.getElementById('pickUp').checked;
-
-            if (outOfService && (returnDate || returnTime)) {
-                Swal.showValidationMessage('Per favore, deseleziona "Non disponibile" per impostare una data di rientro e un orario.');
-                return false;
-            }
-
-            if (pickUp && !returnDate && !returnTime) {
-                Swal.showValidationMessage('Per favore, imposta una data e un orario di rientro per il Pick Up.');
-                return false;
-            }
-
-            const newStatus = determineNewStatus(outOfService, returnDate, returnTime);
-
-            const updateObj = {
-                status: newStatus,
-                pickUp: pickUp
-            };
-
-            if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
-                updateObj.returnDate = returnDate;
-                updateObj.returnTime = returnTime;
-            } else {
-                updateObj.returnDate = null;
-                updateObj.returnTime = null;
-                updateObj.pickUp = false;
-            }
-
-            return {
-                key: key,
-                updateObj: updateObj
-            };
-        }
-
         function determineNewStatus(outOfService, returnDate, returnTime) {
             if (outOfService) {
                 return 'non_disponibile';
             }
-            if (returnDate && moment(returnDate, "YYYY-MM-DD").isSame(moment(), 'day')) {
-                return 'rientra_oggi';
-            }
-            if (returnDate && moment(returnDate, "YYYY-MM-DD").isAfter(moment(), 'day')) {
+            if (returnDate) {
+                const today = moment().startOf('day');
+                const returnMoment = moment(returnDate, "YYYY-MM-DD");
+                if (returnMoment.isSame(today, 'day')) {
+                    return 'rientra_oggi';
+                }
+                if (returnMoment.isBefore(today)) {
+                    return 'disponibile';
+                }
                 return 'noleggiato';
             }
             return 'disponibile';
@@ -435,7 +459,8 @@
                 status: 'disponibile',
                 returnDate: null,
                 returnTime: null,
-                pickUp: false
+                pickUp: false,
+                hotelName: null
             }).then(() => {
                 Swal.fire({
                     icon: 'success',
@@ -509,5 +534,6 @@
     </script>
 </body>
 </html>
+
 
 
