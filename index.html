@@ -277,26 +277,41 @@
             );
         }
 
-        function loadScooters() {
-            let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0;
-            dbRefScooters.orderByChild('order').on('value', snapshot => {
-                const container = document.getElementById('scooterList');
-                container.innerHTML = '';
-                snapshot.forEach(child => {
-                    const scooter = child.val();
-                    const scooterButton = createScooterButton(scooter, child.key);
-                    container.appendChild(scooterButton);
+function loadScooters() {
+    let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0;
+    dbRefScooters.orderByChild('order').on('value', snapshot => {
+        console.log("Dati caricati da Firebase:", snapshot.val());
+        const container = document.getElementById('scooterList');
+        container.innerHTML = '';
+        snapshot.forEach(child => {
+            const scooter = child.val();
+            const scooterButton = createScooterButton(scooter, child.key);
+            container.appendChild(scooterButton);
 
-                    switch (scooter.status) {
-                        case 'disponibile': availableCount++; break;
-                        case 'rientra_oggi': returnTodayCount++; break;
-                        case 'noleggiato': rentedCount++; break;
-                        case 'non_disponibile': outOfServiceCount++; break;
-                    }
-                });
-                updateStatusCounters(availableCount, returnTodayCount, rentedCount, outOfServiceCount);
-            });
-        }
+            switch (scooter.status) {
+                case 'disponibile': availableCount++; break;
+                case 'rientra_oggi': returnTodayCount++; break;
+                case 'noleggiato': rentedCount++; break;
+                case 'non_disponibile': outOfServiceCount++; break;
+            }
+        });
+        console.log(`Counters - Disponibili: ${availableCount}, Rientro: ${returnTodayCount}, Noleggiati: ${rentedCount}, NonDisp: ${outOfServiceCount}`);
+        updateStatusCounters(availableCount, returnTodayCount, rentedCount, outOfServiceCount);
+    });
+}
+
+function updateStatusCounters(availableCount, returnTodayCount, rentedCount, outOfServiceCount) {
+    const totalScooters = 35; // Il numero totale di scooter
+    if (availableCount + returnTodayCount + rentedCount + outOfServiceCount > totalScooters) {
+        console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
+        return;
+    }
+    document.getElementById('availableCount').textContent = availableCount;
+    document.getElementById('returnTodayCount').textContent = returnTodayCount;
+    document.getElementById('rentedCount').textContent = rentedCount;
+    document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
+}
+
 
         function createScooterButton(scooter, key) {
             const scooterButton = document.createElement('button');
