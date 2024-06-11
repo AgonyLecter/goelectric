@@ -84,6 +84,7 @@
             font-size: 14px;
             color: #6c757d;
             text-align: center;
+            cursor: pointer;
         }
         .swal2-popup {
             font-size: 1.2rem !important;
@@ -108,6 +109,16 @@
             background-color: #dc3545;
             color: #fff;
         }
+        #pepeImage {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: auto;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -128,6 +139,7 @@
         <ul id="todayReservationsList" class="list-group w-100"></ul>
         <div id="scooterList" class="w-100 row"></div>
         <div id="footer"> &reg;Licenza Unica GoElectric </div>
+        <img id="pepeImage" src="pepe.png" alt="Pepe Image">
     </div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
@@ -277,7 +289,7 @@
             );
         }
 
-function loadScooters() {
+        function loadScooters() {
     let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0;
     dbRefScooters.orderByChild('order').on('value', snapshot => {
         console.log("Dati caricati da Firebase:", snapshot.val());
@@ -546,9 +558,29 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
                 });
             });
         }
+
+        // Easter Egg
+        let clickCount = 0;
+        const footerElement = document.getElementById('footer');
+        footerElement.addEventListener('click', () => {
+            clickCount++;
+            if (clickCount === 10) {
+                showPepeImage();
+                clickCount = 0;
+            }
+        });
+
+        function showPepeImage() {
+            const pepeImage = document.getElementById('pepeImage');
+            pepeImage.style.display = 'block';
+            pepeImage.classList.add('animate__animated', 'animate__bounce', 'animate__fadeOut');
+            setTimeout(() => {
+                pepeImage.style.display = 'none';
+                pepeImage.classList.remove('animate__animated', 'animate__bounce', 'animate__fadeOut');
+            }, 10000);
+        }
     </script>
 </body>
 </html>
-
 
 
