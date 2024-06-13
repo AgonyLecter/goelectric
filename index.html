@@ -11,7 +11,6 @@
     <link rel="icon" href="logo.ico">
     <link rel="manifest" href="manifest.json">
     
-    <!-- Meta tags per iOS -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="logo.ico">
@@ -60,6 +59,7 @@
         .return-today { background-color: #ffc107; }
         .btn-danger { background-color: #dc3545; }
         .out-of-service { background-color: #6c757d; }
+        .easy-go { background-color: #00BFFF; }
         .modal-content { font-family: 'Roboto', sans-serif; }
         .status-counter {
             display: flex;
@@ -135,6 +135,7 @@
             <p>Rientro: <span id="returnTodayCount">0</span></p>
             <p>Noleggiati: <span id="rentedCount">0</span></p>
             <p>NonDisp: <span id="outOfServiceCount">0</span></p>
+            <p>EG: <span id="easyGoCount">0</span></p>
         </div>
         <ul id="todayReservationsList" class="list-group w-100"></ul>
         <div id="scooterList" class="w-100 row"></div>
@@ -153,7 +154,7 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyC346gJHt-Dg7_bjzYw7k1D6j0tcalxht4",
+            apiKey: "API_KEY",
             authDomain: "goelectric-e9299.firebaseapp.com",
             databaseURL: "https://goelectric-e9299-default-rtdb.firebaseio.com",
             projectId: "goelectric-e9299",
@@ -184,7 +185,6 @@
                 navigator.serviceWorker.register('service-worker.js')
                 .then(registration => {
                     console.log('Service Worker registered with scope:', registration.scope);
-
                     registration.onupdatefound = () => {
                         const installingWorker = registration.installing;
                         installingWorker.onstatechange = () => {
@@ -290,42 +290,65 @@
         }
 
         function loadScooters() {
-    let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0;
-    dbRefScooters.orderByChild('order').on('value', snapshot => {
-        console.log("Dati caricati da Firebase:", snapshot.val());
-        const container = document.getElementById('scooterList');
-        container.innerHTML = '';
-        snapshot.forEach(child => {
-            const scooter = child.val();
-            const scooterButton = createScooterButton(scooter, child.key);
-            container.appendChild(scooterButton);
+            dbRefScooters.orderByChild('order').on('value', snapshot => {
+                const scooters = [];
+                snapshot.forEach(child => {
+                    const scooter = child.val();
+                    scooter.key = child.key;
+                    scooters.push(scooter);
+                });
+                updateStatusCounters(scooters);
+                displayScooters(scooters);
+            });
+        }
 
-            switch (scooter.status) {
-                case 'disponibile': availableCount++; break;
-                case 'rientra_oggi': returnTodayCount++; break;
-                case 'noleggiato': rentedCount++; break;
-                case 'non_disponibile': outOfServiceCount++; break;
+        function updateStatusCounters(scooters) {
+            let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0, easyGoCount = 0;
+            scooters.forEach(scooter => {
+                if (scooter.easyGo) easyGoCount++;
+                switch (scooter.status) {
+                    case 'disponibile':
+                        availableCount++;
+                        break;
+                    case 'rientra_oggi':
+                        returnTodayCount++;
+                        break;
+                    case 'noleggiato':
+                        rentedCount++;
+                        break;
+                    case 'non_disponibile':
+                        outOfServiceCount++;
+                        break;
+                    default:
+                        console.warn(`Stato sconosciuto: ${scooter.status}`);
+                        break;
+                }
+            });
+
+            const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
+            if (totalScooters > 35) {
+                console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
+                toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
+                return;
             }
-        });
-        console.log(`Counters - Disponibili: ${availableCount}, Rientro: ${returnTodayCount}, Noleggiati: ${rentedCount}, NonDisp: ${outOfServiceCount}`);
-        updateStatusCounters(availableCount, returnTodayCount, rentedCount, outOfServiceCount);
-    });
-}
 
-function updateStatusCounters(availableCount, returnTodayCount, rentedCount, outOfServiceCount) {
-    const totalScooters = 35; // Il numero totale di scooter
-    if (availableCount + returnTodayCount + rentedCount + outOfServiceCount > totalScooters) {
-        console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
-        return;
-    }
-    document.getElementById('availableCount').textContent = availableCount;
-    document.getElementById('returnTodayCount').textContent = returnTodayCount;
-    document.getElementById('rentedCount').textContent = rentedCount;
-    document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
-}
+            document.getElementById('availableCount').textContent = availableCount;
+            document.getElementById('returnTodayCount').textContent = returnTodayCount;
+            document.getElementById('rentedCount').textContent = rentedCount;
+            document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
+            document.getElementById('easyGoCount').textContent = easyGoCount;
+        }
 
+        function displayScooters(scooters) {
+            const container = document.getElementById('scooterList');
+            container.innerHTML = '';
+            scooters.forEach(scooter => {
+                const scooterButton = createScooterButton(scooter);
+                container.appendChild(scooterButton);
+            });
+        }
 
-        function createScooterButton(scooter, key) {
+        function createScooterButton(scooter) {
             const scooterButton = document.createElement('button');
             let buttonText = `${scooter.name} - ${translateStatus(scooter.status)}`;
             if (scooter.status === 'noleggiato') {
@@ -339,24 +362,20 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
             if (scooter.hotelName) {
                 buttonText += ` - Hotel: ${scooter.hotelName}`;
             }
-            scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+            if (scooter.easyGo) {
+                buttonText += ' (EG)';
+            }
+            scooterButton.className = `btn ${getButtonClass(scooter.status, scooter.easyGo)} scooter-btn`;
             scooterButton.textContent = buttonText;
             scooterButton.onclick = () => {
                 if (document.getElementById('sortByReturnButton').textContent === 'Ordina per Rientri') {
-                    showManageModal(scooter, key);
+                    showManageModal(scooter);
                 }
             };
             return scooterButton;
         }
 
-        function updateStatusCounters(availableCount, returnTodayCount, rentedCount, outOfServiceCount) {
-            document.getElementById('availableCount').textContent = availableCount;
-            document.getElementById('returnTodayCount').textContent = returnTodayCount;
-            document.getElementById('rentedCount').textContent = rentedCount;
-            document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
-        }
-
-        function showManageModal(scooter, key) {
+        function showManageModal(scooter) {
             Swal.fire({
                 title: 'Gestisci Scooter',
                 html: `
@@ -376,6 +395,10 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
                         <input type="checkbox" id="pickUp">
                         <label for="pickUp">Pick Up</label>
                     </div>
+                    <div class="swal2-checkbox">
+                        <input type="checkbox" id="easyGo">
+                        <label for="easyGo">EasyGo</label>
+                    </div>
                     <button type="button" id="unlockScooterButton" class="swal2-confirm swal2-styled" style="background-color: #17a2b8;">Sblocca Scooter</button>
                 `,
                 showCancelButton: true,
@@ -392,6 +415,7 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
                     document.getElementById('hotelName').value = scooter.hotelName || '';
                     document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
                     document.getElementById('pickUp').checked = scooter.pickUp || false;
+                    document.getElementById('easyGo').checked = scooter.easyGo || false;
                     document.getElementById('pickUp').addEventListener('change', (event) => {
                         document.getElementById('hotelNameContainer').style.display = event.target.checked ? 'block' : 'none';
                     });
@@ -399,7 +423,7 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
                         document.getElementById('hotelNameContainer').style.display = 'block';
                     }
                     document.getElementById('unlockScooterButton').addEventListener('click', () => {
-                        unlockScooter(key);
+                        unlockScooter(scooter.key);
                         Swal.close();
                     });
                 },
@@ -409,6 +433,7 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
                     const hotelName = document.getElementById('pickUp').checked ? document.getElementById('hotelName').value : null;
                     const outOfService = document.getElementById('outOfService').checked;
                     const pickUp = document.getElementById('pickUp').checked;
+                    const easyGo = document.getElementById('easyGo').checked;
 
                     if (outOfService && (returnDate || returnTime)) {
                         Swal.showValidationMessage('Per favore, deseleziona "Non disponibile" per impostare una data di rientro e un orario.');
@@ -425,7 +450,8 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
                     const updateObj = {
                         status: newStatus,
                         pickUp: pickUp,
-                        hotelName: hotelName
+                        hotelName: hotelName,
+                        easyGo: easyGo
                     };
 
                     if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
@@ -439,7 +465,7 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
                     }
 
                     return {
-                        key: key,
+                        key: scooter.key,
                         updateObj: updateObj
                     };
                 }
@@ -487,7 +513,8 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
                 returnDate: null,
                 returnTime: null,
                 pickUp: false,
-                hotelName: null
+                hotelName: null,
+                easyGo: false
             }).then(() => {
                 Swal.fire({
                     icon: 'success',
@@ -513,7 +540,10 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
             }
         }
 
-        function getButtonClass(status) {
+        function getButtonClass(status, easyGo) {
+            if (easyGo && status === 'disponibile') {
+                return 'easy-go';
+            }
             switch (status) {
                 case 'disponibile': return 'btn-success';
                 case 'rientra_oggi': return 'return-today';
@@ -553,13 +583,14 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
                 const container = document.getElementById('scooterList');
                 container.innerHTML = '';
                 data.forEach(scooter => {
-                    const scooterButton = createScooterButton(scooter, scooter.key);
+                    const scooterButton = createScooterButton(scooter);
                     container.appendChild(scooterButton);
                 });
             });
         }
 
-        // Easter Egg
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
         let clickCount = 0;
         const footerElement = document.getElementById('footer');
         footerElement.addEventListener('click', () => {
@@ -582,5 +613,6 @@ function updateStatusCounters(availableCount, returnTodayCount, rentedCount, out
     </script>
 </body>
 </html>
+
 
 
