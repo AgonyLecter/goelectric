@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="icon" href="logo.ico">
     <link rel="manifest" href="manifest.json">
-    
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="logo.ico">
@@ -367,7 +366,8 @@
             }
             scooterButton.className = `btn ${getButtonClass(scooter.status, scooter.easyGo)} scooter-btn`;
             scooterButton.textContent = buttonText;
-            scooterButton.onclick = () => {
+            scooterButton.onclick = (event) => {
+                event.preventDefault();
                 if (document.getElementById('sortByReturnButton').textContent === 'Ordina per Rientri') {
                     showManageModal(scooter);
                 }
@@ -380,9 +380,9 @@
                 title: 'Gestisci Scooter',
                 html: `
                     <label for="returnDate">Data di Rientro:</label>
-                    <input type="date" id="returnDate" class="swal2-input">
+                    <input type="date" id="returnDate" class="swal2-input" autocomplete="off">
                     <label for="returnTime">Ora di Rientro:</label>
-                    <input type="time" id="returnTime" class="swal2-input">
+                    <input type="time" id="returnTime" class="swal2-input" autocomplete="off">
                     <div id="hotelNameContainer" style="display: none;">
                         <label for="hotelName">Nome dell'Hotel:</label>
                         <input type="text" id="hotelName" class="swal2-input">
@@ -613,6 +613,5 @@
     </script>
 </body>
 </html>
-
 
 
