@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Scooter EasyGo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="icon" href="logo.ico">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="logo.ico">
+    <meta name="apple-mobile-web-app-title" content="EasyGo">
+    <meta name="google" content="notranslate">
+
+    <style>
+        body {
+            background-color: #f4f4f4;
+            padding-top: 20px;
+            font-family: 'Roboto', sans-serif;
+        }
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        #currentDateTime, #notifications, #scooterStatusCount {
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .scooter-btn {
+            width: 100%;
+            margin: 5px 0;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+        .scooter-btn:hover {
+            transform: scale(1.02);
+        }
+        .btn-primary, .btn-info, .btn-secondary, .btn-warning {
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            transition: transform 0.2s;
+            margin: 5px 0;
+            padding: 10px 20px;
+        }
+        .btn-primary:hover, .btn-info:hover, .btn-secondary:hover, .btn-warning:hover {
+            transform: scale(1.05);
+        }
+        .btn-success { background-color: #28a745; }
+        .return-today { background-color: #ffc107; }
+        .btn-danger { background-color: #dc3545; }
+        .out-of-service { background-color: #6c757d; }
+        .modal-content { font-family: 'Roboto', sans-serif; }
+        .status-counter {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .status-counter p {
+            margin: 0;
+            font-size: 18px;
+        }
+        .status-counter p span {
+            margin-right: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+        #footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #6c757d;
+            text-align: center;
+            cursor: pointer;
+        }
+        .swal2-popup {
+            font-size: 1.2rem !important;
+            font-family: 'Roboto', sans-serif;
+            width: 90% !important;
+            max-width: 500px !important;
+        }
+        .swal2-input {
+            margin: 0.5rem 0 !important;
+        }
+        .swal2-checkbox {
+            margin: 1rem 0 !important;
+        }
+        .swal2-actions {
+            margin: 1.5rem 0 0 !important;
+        }
+        .swal2-styled.swal2-confirm {
+            background-color: #00ff15;
+            color: #fff;
+        }
+        .swal2-styled.swal2-cancel {
+            background-color: #dc3545;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container d-flex flex-column align-items-center">
+        <img src="logo.png" class="logo mb-3" alt="EasyGo Logo">
+        <div id="navMenu" class="mb-3 d-flex justify-content-center">
+            <a href="reservations.html" class="btn btn-primary">Prenotazioni</a>
+            <button class="btn btn-info" id="sortByReturnButton" onclick="toggleView()">Ordina per Rientri</button>
+        </div>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="siteSwitcher" onchange="switchSite()">
+            <label class="form-check-label" for="siteSwitcher" id="switchLabel">EasyGo</label>
+        </div>
+        <div id="currentDateTime"></div>
+        <div id="notifications">Prenotazioni di oggi:</div>
+        <div id="scooterStatusCount" class="status-counter">
+            <p>Disponibili: <span id="availableCount">0</span></p>
+            <p>Rientro: <span id="returnTodayCount">0</span></p>
+            <p>Noleggiati: <span id="rentedCount">0</span></p>
+            <p>NonDisp: <span id="outOfServiceCount">0</span></p>
+        </div>
+        <ul id="todayReservationsList" class="list-group w-100"></ul>
+        <div id="scooterList" class="w-100 row"></div>
+        <div id="footer"> &reg;Licenza Unica EasyGo </div>
+    </div>
+
+    <!-- Script JS e Firebase -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "YOUR_EASYGO_API_KEY",
+            authDomain: "your-easygo-app.firebaseapp.com",
+            databaseURL: "https://your-easygo-app.firebaseio.com",
+            projectId: "your-easygo-app",
+            storageBucket: "your-easygo-app.appspot.com",
+            messagingSenderId: "YOUR_EASYGO_SENDER_ID",
+            appId: "YOUR_EASYGO_APP_ID",
+            measurementId: "YOUR_EASYGO_MEASUREMENT_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        const dbRef = firebase.database().ref('reservations');
+        const dbRefScooters = firebase.database().ref('scooters');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+            registerServiceWorker();
+            applyUserPreferences();
+        });
+
+        function initializeApp() {
+            try {
+                checkAndUpdateScooters();
+                loadScooters();
+                loadTodayReservations();
+                setInterval(updateDateTime, 1000);
+            } catch (error) {
+                toastr.error('Errore durante l\'inizializzazione dell\'app.');
+                console.error('Errore durante l\'inizializzazione dell\'app:', error);
+            }
+        }
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker registered with scope:', registration.scope);
+                    registration.onupdatefound = () => {
+                        const installingWorker = registration.installing;
+                        installingWorker.onstatechange = () => {
+                            if (installingWorker.state === 'installed') {
+                                if (navigator.serviceWorker.controller) {
+                                    Swal.fire({
+                                        title: 'Aggiornamento Disponibile',
+                                        text: 'Una nuova versione è disponibile. Vuoi aggiornare ora?',
+                                        icon: 'info',
+                                        showCancelButton: true,
+                                        confirmButtonText: 'Aggiorna',
+                                        cancelButtonText: 'Annulla'
+                                    }).then((result) => {
+                                        if (result.isConfirmed) {
+                                            window.location.reload();
+                                        }
+                                    });
+                                }
+                            }
+                        };
+                    };
+                })
+                .catch(error => {
+                    toastr.error('Errore durante la registrazione del Service Worker.');
+                    console.error('Service Worker registration failed:', error);
+                });
+            }
+        }
+
+        function toggleView() {
+            const sortByReturnButton = document.getElementById('sortByReturnButton');
+            if (sortByReturnButton.textContent === 'Ordina per Rientri') {
+                displayScootersByReturnDate();
+                sortByReturnButton.textContent = 'Torna alla Home';
+            } else {
+                loadScooters();
+                sortByReturnButton.textContent = 'Ordina per Rientri';
+            }
+        }
+
+        function loadTodayReservations() {
+            const today = moment().format('YYYY-MM-DD');
+            dbRef.orderByChild('date').equalTo(today).on('value', snapshot => {
+                const reservations = snapshot.val() || {};
+                const list = document.getElementById('todayReservationsList');
+                list.innerHTML = '';
+                Object.keys(reservations).forEach(key => {
+                    const reservation = reservations[key];
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.textContent = `Cliente: ${reservation.customerName}, Numero di scooter: ${reservation.scooterCount}, Orario: ${reservation.time}${reservation.delivery ? ', Consegna a: ' + reservation.address : ''}`;
+                    list.appendChild(li);
+                });
+            }, error => {
+                toastr.error('Errore durante il caricamento delle prenotazioni.');
+                console.error('Errore durante il caricamento delle prenotazioni:', error);
+            });
+        }
+
+        function checkAndUpdateScooters() {
+            const today = moment().startOf('day');
+            dbRefScooters.once('value', snapshot => {
+                snapshot.forEach(child => {
+                    const scooter = child.val();
+                    const updates = determineUpdates(scooter, today);
+                    if (shouldUpdateScooter(scooter, updates)) {
+                        dbRefScooters.child(child.key).update(updates).catch(error => {
+                            toastr.error('Errore durante l\'aggiornamento degli scooter.');
+                            console.error('Errore durante l\'aggiornamento degli scooter:', error);
+                        });
+                    }
+                });
+            }).then(loadScooters).catch(error => {
+                toastr.error('Errore durante il caricamento degli scooter.');
+                console.error('Errore durante il caricamento degli scooter:', error);
+            });
+        }
+
+        function determineUpdates(scooter, today) {
+            let status = scooter.status;
+            if (scooter.returnDate) {
+                const returnDate = moment(scooter.returnDate, "YYYY-MM-DD");
+                if (returnDate.isBefore(today, 'day')) {
+                    status = 'disponibile';
+                } else if (returnDate.isSame(today, 'day')) {
+                    status = 'rientra_oggi';
+                } else {
+                    status = 'noleggiato';
+                }
+            }
+            let updates = { status: status };
+
+            if (status === 'disponibile') {
+                updates = {
+                    ...updates,
+                    returnDate: null,
+                    returnTime: null,
+                    pickUp: false,
+                    hotelName: null
+                };
+            }
+            return updates;
+        }
+
+        function shouldUpdateScooter(scooter, updates) {
+            return (
+                updates.status !== scooter.status ||
+                updates.returnDate !== scooter.returnDate ||
+                updates.returnTime !== scooter.returnTime ||
+                updates.pickUp !== scooter.pickUp ||
+                updates.hotelName !== scooter.hotelName
+            );
+        }
+
+        function loadScooters() {
+            dbRefScooters.orderByChild('order').on('value', snapshot => {
+                const scooters = [];
+                snapshot.forEach(child => {
+                    const scooter = child.val();
+                    scooter.key = child.key;
+                    scooters.push(scooter);
+                });
+                updateStatusCounters(scooters);
+                displayScooters(scooters);
+            }, error => {
+                toastr.error('Errore durante il caricamento degli scooter.');
+                console.error('Errore durante il caricamento degli scooter:', error);
+            });
+        }
+
+        function updateStatusCounters(scooters) {
+            let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0;
+            scooters.forEach(scooter => {
+                switch (scooter.status) {
+                    case 'disponibile':
+                        availableCount++;
+                        break;
+                    case 'rientra_oggi':
+                        returnTodayCount++;
+                        break;
+                    case 'noleggiato':
+                        rentedCount++;
+                        break;
+                    case 'non_disponibile':
+                        outOfServiceCount++;
+                        break;
+                    default:
+                        console.warn(`Stato sconosciuto: ${scooter.status}`);
+                        break;
+                }
+            });
+
+            const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
+            if (totalScooters > 35) {
+                console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
+                toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
+                return;
+            }
+
+            document.getElementById('availableCount').textContent = availableCount;
+            document.getElementById('returnTodayCount').textContent = returnTodayCount;
+            document.getElementById('rentedCount').textContent = rentedCount;
+            document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
+        }
+
+        function displayScooters(scooters) {
+            const container = document.getElementById('scooterList');
+            container.innerHTML = '';
+            scooters.forEach(scooter => {
+                const scooterButton = createScooterButton(scooter);
+                container.appendChild(scooterButton);
+            });
+        }
+
+        function createScooterButton(scooter) {
+            const scooterButton = document.createElement('button');
+            let buttonText = `${scooter.name} - ${translateStatus(scooter.status)}`;
+            if (scooter.status === 'noleggiato') {
+                buttonText += ` al ${scooter.returnDate} alle ${scooter.returnTime}`;
+            } else if (scooter.status === 'rientra_oggi') {
+                buttonText += ` alle ${scooter.returnTime}`;
+            }
+            if (scooter.pickUp) {
+                buttonText += ' (Pick Up)';
+            }
+            if (scooter.hotelName) {
+                buttonText += ` - Hotel: ${scooter.hotelName}`;
+            }
+            scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+            scooterButton.textContent = buttonText;
+            scooterButton.onclick = (event) => {
+                event.preventDefault();
+                if (document.getElementById('sortByReturnButton').textContent === 'Ordina per Rientri') {
+                    showManageModal(scooter);
+                }
+            };
+            return scooterButton;
+        }
+
+        function isIOS() {
+            return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        }
+
+        function showManageModal(scooter) {
+            Swal.fire({
+                title: 'Gestisci Scooter',
+                html: `
+                    <label for="returnDate">Data di Rientro:</label>
+                    <input type="date" id="returnDate" class="swal2-input" autocomplete="off">
+                    <label for="returnTime">Ora di Rientro:</label>
+                    <input type="time" id="returnTime" class="swal2-input" autocomplete="off">
+                    <div id="hotelNameContainer" style="display: none;">
+                        <label for="hotelName">Nome dell'Hotel:</label>
+                        <input type="text" id="hotelName" class="swal2-input">
+                    </div>
+                    <div class="swal2-checkbox">
+                        <input type="checkbox" id="outOfService">
+                        <label for="outOfService">Non disponibile</label>
+                    </div>
+                    <div class="swal2-checkbox">
+                        <input type="checkbox" id="pickUp">
+                        <label for="pickUp">Pick Up</label>
+                    </div>
+                    <button type="button" id="unlockScooterButton" class="swal2-confirm swal2-styled" style="background-color: #17a2b8;">Sblocca Scooter</button>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Conferma',
+                cancelButtonText: 'Annulla',
+                focusConfirm: false,
+                customClass: {
+                    confirmButton: 'btn-success',
+                    cancelButton: 'btn-danger'
+                },
+                didOpen: () => {
+                    document.getElementById('returnDate').value = scooter.returnDate || '';
+                    document.getElementById('returnTime').value = scooter.returnTime || '';
+                    document.getElementById('hotelName').value = scooter.hotelName || '';
+                    document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
+                    document.getElementById('pickUp').checked = scooter.pickUp || false;
+                    document.getElementById('pickUp').addEventListener('change', (event) => {
+                        document.getElementById('hotelNameContainer').style.display = event.target.checked ? 'block' : 'none';
+                    });
+                    if (scooter.pickUp) {
+                        document.getElementById('hotelNameContainer').style.display = 'block';
+                    }
+                    document.getElementById('unlockScooterButton').addEventListener('click', () => {
+                        unlockScooter(scooter.key);
+                        Swal.close();
+                    });
+
+                    // Disabilita il focus automatico su iPhone
+                    if (!isIOS()) {
+                        document.getElementById('returnDate').focus();
+                    }
+                },
+                preConfirm: () => {
+                    const returnDate = document.getElementById('returnDate').value;
+                    const returnTime = document.getElementById('returnTime').value;
+                    const hotelName = document.getElementById('pickUp').checked ? document.getElementById('hotelName').value : null;
+                    const outOfService = document.getElementById('outOfService').checked;
+                    const pickUp = document.getElementById('pickUp').checked;
+
+                    if (outOfService && (returnDate || returnTime)) {
+                        Swal.showValidationMessage('Per favore, deseleziona "Non disponibile" per impostare una data di rientro e un orario.');
+                        return false;
+                    }
+
+                    if (pickUp && (!returnDate || !returnTime)) {
+                        Swal.showValidationMessage('Per favore, imposta una data e un orario di rientro per il Pick Up.');
+                        return false;
+                    }
+
+                    const newStatus = determineNewStatus(outOfService, returnDate, returnTime);
+
+                    const updateObj = {
+                        status: newStatus,
+                        pickUp: pickUp,
+                        hotelName: hotelName
+                    };
+
+                    if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
+                        updateObj.returnDate = returnDate;
+                        updateObj.returnTime = returnTime;
+                    } else {
+                        updateObj.returnDate = null;
+                        updateObj.returnTime = null;
+                        updateObj.pickUp = false;
+                        updateObj.hotelName = null;
+                    }
+
+                    return {
+                        key: scooter.key,
+                        updateObj: updateObj
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const { key, updateObj } = result.value;
+                    dbRefScooters.child(key).update(updateObj).then(() => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Successo',
+                            text: 'Lo scooter è stato aggiornato con successo.',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        loadScooters();
+                    }).catch(error => {
+                        toastr.error('Errore durante l\'aggiornamento dello scooter.');
+                        console.error('Errore durante aggiornamento dello scooter:', error);
+                    });
+                }
+            });
+        }
+
+        function determineNewStatus(outOfService, returnDate, returnTime) {
+            if (outOfService) {
+                return 'non_disponibile';
+            }
+            if (returnDate) {
+                const today = moment().startOf('day');
+                const returnMoment = moment(returnDate, "YYYY-MM-DD");
+                if (returnMoment.isSame(today, 'day')) {
+                    return 'rientra_oggi';
+                }
+                if (returnMoment.isBefore(today)) {
+                    return 'disponibile';
+                }
+                return 'noleggiato';
+            }
+            return 'disponibile';
+        }
+
+        function unlockScooter(key) {
+            dbRefScooters.child(key).update({
+                status: 'disponibile',
+                returnDate: null,
+                returnTime: null,
+                pickUp: false,
+                hotelName: null
+            }).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Successo',
+                    text: 'Scooter sbloccato con successo.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                loadScooters();
+            }).catch(error => {
+                toastr.error('Errore durante lo sblocco dello scooter.');
+                console.error('Errore durante lo sblocco dello scooter:', error);
+            });
+        }
+
+        function translateStatus(status) {
+            switch (status) {
+                case 'disponibile': return 'Disponibile';
+                case 'rientra_oggi': return 'Rientra oggi';
+                case 'noleggiato': return 'Noleggiato';
+                case 'non_disponibile': return 'Non disponibile';
+                default: return 'Stato non definito';
+            }
+        }
+
+        function getButtonClass(status) {
+            switch (status) {
+                case 'disponibile': return 'btn-success';
+                case 'rientra_oggi': return 'return-today';
+                case 'noleggiato': return 'btn-danger';
+                case 'non_disponibile': return 'out-of-service';
+                default: return 'btn-secondary';
+            }
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDateTime').textContent = now.toLocaleString('it-IT', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        function displayScootersByReturnDate() {
+            dbRefScooters.once('value', snapshot => {
+                const data = [];
+                snapshot.forEach(child => {
+                    const scooter = child.val();
+                    scooter.key = child.key;
+                    data.push(scooter);
+                });
+                data.sort((a, b) => {
+                    const statusPriority = {
+                        'disponibile': 1,
+                        'rientra_oggi': 2,
+                        'noleggiato': 3,
+                        'non_disponibile': 4
+                    };
+                    if (statusPriority[a.status] !== statusPriority[b.status]) {
+                        return statusPriority[a.status] - statusPriority[b.status];
+                    }
+                    return (a.returnDate + a.returnTime || '').localeCompare(b.returnDate + b.returnTime || '');
+                });
+                const container = document.getElementById('scooterList');
+                container.innerHTML = '';
+                data.forEach(scooter => {
+                    const scooterButton = createScooterButton(scooter);
+                    container.appendChild(scooterButton);
+                });
+            });
+        }
+
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        let clickCount = 0;
+        const footerElement = document.getElementById('footer');
+        footerElement.addEventListener('click', () => {
+            clickCount++;
+            if (clickCount === 10) {
+                showPepeImage();
+                clickCount = 0;
+            }
+        });
+
+        function showPepeImage() {
+            document.getElementById('pepeImage').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('pepeImage').style.display = 'none';
+            }, 3000);
+        }
+
+        function switchSite() {
+            const isEasyGo = document.getElementById('siteSwitcher').checked;
+            const label = document.getElementById('switchLabel');
+            if (isEasyGo) {
+                label.textContent = 'EasyGo';
+                localStorage.setItem('selectedSite', 'EasyGo');
+                window.location.href = 'easygo.html';
+            } else {
+                label.textContent = 'GoElectric';
+                localStorage.setItem('selectedSite', 'GoElectric');
+                window.location.href = 'index.html';
+            }
+        }
+
+        function applyUserPreferences() {
+            const selectedSite = localStorage.getItem('selectedSite');
+            if (selectedSite === 'EasyGo') {
+                document.getElementById('siteSwitcher').checked = true;
+                document.getElementById('switchLabel').textContent = 'EasyGo';
+            } else {
+                document.getElementById('siteSwitcher').checked = false;
+                document.getElementById('switchLabel').textContent = 'GoElectric';
+            }
+        }
+    </script>
+</body>
+</html>
