@@ -127,6 +127,10 @@
             <a href="reservations.html" class="btn btn-primary">Reservations</a>
             <button class="btn btn-info" id="sortByReturnButton" onclick="toggleView()">Ordina per Rientri</button>
         </div>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="siteSwitcher" onchange="switchSite()">
+            <label class="form-check-label" for="siteSwitcher" id="switchLabel">GoElectric</label>
+        </div>
         <div id="currentDateTime"></div>
         <div id="notifications">Prenotazioni di oggi:</div>
         <div id="scooterStatusCount" class="status-counter">
@@ -170,13 +174,19 @@
         document.addEventListener('DOMContentLoaded', () => {
             initializeApp();
             registerServiceWorker();
+            applyUserPreferences();
         });
 
         function initializeApp() {
-            checkAndUpdateScooters();
-            loadScooters();
-            loadTodayReservations();
-            setInterval(updateDateTime, 1000);
+            try {
+                checkAndUpdateScooters();
+                loadScooters();
+                loadTodayReservations();
+                setInterval(updateDateTime, 1000);
+            } catch (error) {
+                toastr.error('Errore durante l\'inizializzazione dell\'app.');
+                console.error('Errore durante l\'inizializzazione dell\'app:', error);
+            }
         }
 
         function registerServiceWorker() {
@@ -207,6 +217,7 @@
                     };
                 })
                 .catch(error => {
+                    toastr.error('Errore durante la registrazione del Service Worker.');
                     console.error('Service Worker registration failed:', error);
                 });
             }
@@ -236,6 +247,9 @@
                     li.textContent = `Cliente: ${reservation.customerName}, Numero di scooter: ${reservation.scooterCount}, Orario: ${reservation.time}${reservation.delivery ? ', Consegna a: ' + reservation.address : ''}`;
                     list.appendChild(li);
                 });
+            }, error => {
+                toastr.error('Errore durante il caricamento delle prenotazioni.');
+                console.error('Errore durante il caricamento delle prenotazioni:', error);
             });
         }
 
@@ -246,10 +260,16 @@
                     const scooter = child.val();
                     const updates = determineUpdates(scooter, today);
                     if (shouldUpdateScooter(scooter, updates)) {
-                        dbRefScooters.child(child.key).update(updates);
+                        dbRefScooters.child(child.key).update(updates).catch(error => {
+                            toastr.error('Errore durante l\'aggiornamento degli scooter.');
+                            console.error('Errore durante l\'aggiornamento degli scooter:', error);
+                        });
                     }
                 });
-            }).then(loadScooters);
+            }).then(loadScooters).catch(error => {
+                toastr.error('Errore durante il caricamento degli scooter.');
+                console.error('Errore durante il caricamento degli scooter:', error);
+            });
         }
 
         function determineUpdates(scooter, today) {
@@ -298,6 +318,9 @@
                 });
                 updateStatusCounters(scooters);
                 displayScooters(scooters);
+            }, error => {
+                toastr.error('Errore durante il caricamento degli scooter.');
+                console.error('Errore durante il caricamento degli scooter:', error);
             });
         }
 
@@ -375,129 +398,128 @@
             return scooterButton;
         }
 
-function isIOS() {
-    return /iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
-function showManageModal(scooter) {
-    Swal.fire({
-        title: 'Gestisci Scooter',
-        html: `
-            <label for="returnDate">Data di Rientro:</label>
-            <input type="date" id="returnDate" class="swal2-input" autocomplete="off">
-            <label for="returnTime">Ora di Rientro:</label>
-            <input type="time" id="returnTime" class="swal2-input" autocomplete="off">
-            <div id="hotelNameContainer" style="display: none;">
-                <label for="hotelName">Nome dell'Hotel:</label>
-                <input type="text" id="hotelName" class="swal2-input">
-            </div>
-            <div class="swal2-checkbox">
-                <input type="checkbox" id="outOfService">
-                <label for="outOfService">Non disponibile</label>
-            </div>
-            <div class="swal2-checkbox">
-                <input type="checkbox" id="pickUp">
-                <label for="pickUp">Pick Up</label>
-            </div>
-            <div class="swal2-checkbox">
-                <input type="checkbox" id="easyGo">
-                <label for="easyGo">EasyGo</label>
-            </div>
-            <button type="button" id="unlockScooterButton" class="swal2-confirm swal2-styled" style="background-color: #17a2b8;">Sblocca Scooter</button>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Conferma',
-        cancelButtonText: 'Annulla',
-        focusConfirm: false,
-        customClass: {
-            confirmButton: 'btn-success',
-            cancelButton: 'btn-danger'
-        },
-        didOpen: () => {
-            document.getElementById('returnDate').value = scooter.returnDate || '';
-            document.getElementById('returnTime').value = scooter.returnTime || '';
-            document.getElementById('hotelName').value = scooter.hotelName || '';
-            document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
-            document.getElementById('pickUp').checked = scooter.pickUp || false;
-            document.getElementById('easyGo').checked = scooter.easyGo || false;
-            document.getElementById('pickUp').addEventListener('change', (event) => {
-                document.getElementById('hotelNameContainer').style.display = event.target.checked ? 'block' : 'none';
-            });
-            if (scooter.pickUp) {
-                document.getElementById('hotelNameContainer').style.display = 'block';
-            }
-            document.getElementById('unlockScooterButton').addEventListener('click', () => {
-                unlockScooter(scooter.key);
-                Swal.close();
-            });
-
-            // Disabilita il focus automatico su iPhone
-            if (!isIOS()) {
-                document.getElementById('returnDate').focus();
-            }
-        },
-        preConfirm: () => {
-            const returnDate = document.getElementById('returnDate').value;
-            const returnTime = document.getElementById('returnTime').value;
-            const hotelName = document.getElementById('pickUp').checked ? document.getElementById('hotelName').value : null;
-            const outOfService = document.getElementById('outOfService').checked;
-            const pickUp = document.getElementById('pickUp').checked;
-            const easyGo = document.getElementById('easyGo').checked;
-
-            if (outOfService && (returnDate || returnTime)) {
-                Swal.showValidationMessage('Per favore, deseleziona "Non disponibile" per impostare una data di rientro e un orario.');
-                return false;
-            }
-
-            if (pickUp && (!returnDate || !returnTime)) {
-                Swal.showValidationMessage('Per favore, imposta una data e un orario di rientro per il Pick Up.');
-                return false;
-            }
-
-            const newStatus = determineNewStatus(outOfService, returnDate, returnTime);
-
-            const updateObj = {
-                status: newStatus,
-                pickUp: pickUp,
-                hotelName: hotelName,
-                easyGo: easyGo
-            };
-
-            if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
-                updateObj.returnDate = returnDate;
-                updateObj.returnTime = returnTime;
-            } else {
-                updateObj.returnDate = null;
-                updateObj.returnTime = null;
-                updateObj.pickUp = false;
-                updateObj.hotelName = null;
-            }
-
-            return {
-                key: scooter.key,
-                updateObj: updateObj
-            };
+        function isIOS() {
+            return /iPhone|iPad|iPod/i.test(navigator.userAgent);
         }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const { key, updateObj } = result.value;
-            dbRefScooters.child(key).update(updateObj).then(() => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Successo',
-                    text: 'Lo scooter è stato aggiornato con successo.',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                loadScooters();
-            }).catch(error => {
-                toastr.error('Errore durante l\'aggiornamento dello scooter.');
-                console.error('Errore durante aggiornamento dello scooter:', error);
+
+        function showManageModal(scooter) {
+            Swal.fire({
+                title: 'Gestisci Scooter',
+                html: `
+                    <label for="returnDate">Data di Rientro:</label>
+                    <input type="date" id="returnDate" class="swal2-input" autocomplete="off">
+                    <label for="returnTime">Ora di Rientro:</label>
+                    <input type="time" id="returnTime" class="swal2-input" autocomplete="off">
+                    <div id="hotelNameContainer" style="display: none;">
+                        <label for="hotelName">Nome dell'Hotel:</label>
+                        <input type="text" id="hotelName" class="swal2-input">
+                    </div>
+                    <div class="swal2-checkbox">
+                        <input type="checkbox" id="outOfService">
+                        <label for="outOfService">Non disponibile</label>
+                    </div>
+                    <div class="swal2-checkbox">
+                        <input type="checkbox" id="pickUp">
+                        <label for="pickUp">Pick Up</label>
+                    </div>
+                    <div class="swal2-checkbox">
+                        <input type="checkbox" id="easyGo">
+                        <label for="easyGo">EasyGo</label>
+                    </div>
+                    <button type="button" id="unlockScooterButton" class="swal2-confirm swal2-styled" style="background-color: #17a2b8;">Sblocca Scooter</button>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Conferma',
+                cancelButtonText: 'Annulla',
+                focusConfirm: false,
+                customClass: {
+                    confirmButton: 'btn-success',
+                    cancelButton: 'btn-danger'
+                },
+                didOpen: () => {
+                    document.getElementById('returnDate').value = scooter.returnDate || '';
+                    document.getElementById('returnTime').value = scooter.returnTime || '';
+                    document.getElementById('hotelName').value = scooter.hotelName || '';
+                    document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
+                    document.getElementById('pickUp').checked = scooter.pickUp || false;
+                    document.getElementById('easyGo').checked = scooter.easyGo || false;
+                    document.getElementById('pickUp').addEventListener('change', (event) => {
+                        document.getElementById('hotelNameContainer').style.display = event.target.checked ? 'block' : 'none';
+                    });
+                    if (scooter.pickUp) {
+                        document.getElementById('hotelNameContainer').style.display = 'block';
+                    }
+                    document.getElementById('unlockScooterButton').addEventListener('click', () => {
+                        unlockScooter(scooter.key);
+                        Swal.close();
+                    });
+
+                    // Disabilita il focus automatico su iPhone
+                    if (!isIOS()) {
+                        document.getElementById('returnDate').focus();
+                    }
+                },
+                preConfirm: () => {
+                    const returnDate = document.getElementById('returnDate').value;
+                    const returnTime = document.getElementById('returnTime').value;
+                    const hotelName = document.getElementById('pickUp').checked ? document.getElementById('hotelName').value : null;
+                    const outOfService = document.getElementById('outOfService').checked;
+                    const pickUp = document.getElementById('pickUp').checked;
+                    const easyGo = document.getElementById('easyGo').checked;
+
+                    if (outOfService && (returnDate || returnTime)) {
+                        Swal.showValidationMessage('Per favore, deseleziona "Non disponibile" per impostare una data di rientro e un orario.');
+                        return false;
+                    }
+
+                    if (pickUp && (!returnDate || !returnTime)) {
+                        Swal.showValidationMessage('Per favore, imposta una data e un orario di rientro per il Pick Up.');
+                        return false;
+                    }
+
+                    const newStatus = determineNewStatus(outOfService, returnDate, returnTime);
+
+                    const updateObj = {
+                        status: newStatus,
+                        pickUp: pickUp,
+                        hotelName: hotelName,
+                        easyGo: easyGo
+                    };
+
+                    if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
+                        updateObj.returnDate = returnDate;
+                        updateObj.returnTime = returnTime;
+                    } else {
+                        updateObj.returnDate = null;
+                        updateObj.returnTime = null;
+                        updateObj.pickUp = false;
+                        updateObj.hotelName = null;
+                    }
+
+                    return {
+                        key: scooter.key,
+                        updateObj: updateObj
+                    };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const { key, updateObj } = result.value;
+                    dbRefScooters.child(key).update(updateObj).then(() => {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Successo',
+                            text: 'Lo scooter è stato aggiornato con successo.',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        loadScooters();
+                    }).catch(error => {
+                        toastr.error('Errore durante l\'aggiornamento dello scooter.');
+                        console.error('Errore durante aggiornamento dello scooter:', error);
+                    });
+                }
             });
         }
-    });
-}
-
 
         function determineNewStatus(outOfService, returnDate, returnTime) {
             if (outOfService) {
@@ -612,13 +634,35 @@ function showManageModal(scooter) {
         });
 
         function showPepeImage() {
-            const pepeImage = document.getElementById('pepeImage');
-            pepeImage.style.display = 'block';
-            pepeImage.classList.add('animate__animated', 'animate__bounce', 'animate__fadeOut');
+            document.getElementById('pepeImage').style.display = 'block';
             setTimeout(() => {
-                pepeImage.style.display = 'none';
-                pepeImage.classList.remove('animate__animated', 'animate__bounce', 'animate__fadeOut');
-            }, 10000);
+                document.getElementById('pepeImage').style.display = 'none';
+            }, 3000);
+        }
+
+        function switchSite() {
+            const isEasyGo = document.getElementById('siteSwitcher').checked;
+            const label = document.getElementById('switchLabel');
+            if (isEasyGo) {
+                label.textContent = 'EasyGo';
+                localStorage.setItem('selectedSite', 'EasyGo');
+                window.location.href = 'easygo.html';
+            } else {
+                label.textContent = 'GoElectric';
+                localStorage.setItem('selectedSite', 'GoElectric');
+                window.location.href = 'index.html';
+            }
+        }
+
+        function applyUserPreferences() {
+            const selectedSite = localStorage.getItem('selectedSite');
+            if (selectedSite === 'EasyGo') {
+                document.getElementById('siteSwitcher').checked = true;
+                document.getElementById('switchLabel').textContent = 'EasyGo';
+            } else {
+                document.getElementById('siteSwitcher').checked = false;
+                document.getElementById('switchLabel').textContent = 'GoElectric';
+            }
         }
     </script>
 </body>
