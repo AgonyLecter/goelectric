@@ -158,13 +158,13 @@
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyAXkaxi5ZWr3pzr3C_0BpwCrL_7y0tC_t8",
-    authDomain: "easygo-f5046.firebaseapp.com",
-    databaseURL: "https://easygo-f5046-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "easygo-f5046",
-    storageBucket: "easygo-f5046.appspot.com",
-    messagingSenderId: "509243295842",
-    appId: "1:509243295842:web:3d3c7f60166d497480293b",
-    measurementId: "G-WFMBB2JEDD"
+            authDomain: "easygo-f5046.firebaseapp.com",
+            databaseURL: "https://easygo-f5046-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "easygo-f5046",
+            storageBucket: "easygo-f5046.appspot.com",
+            messagingSenderId: "509243295842",
+            appId: "1:509243295842:web:3d3c7f60166d497480293b",
+            measurementId: "G-WFMBB2JEDD"
         };
         firebase.initializeApp(firebaseConfig);
 
@@ -172,10 +172,44 @@
         const dbRefScooters = firebase.database().ref('scooters');
 
         document.addEventListener('DOMContentLoaded', () => {
+            applyUserPreferences();
             initializeApp();
             registerServiceWorker();
-            applyUserPreferences();
         });
+
+        function switchSite() {
+            const isGoElectric = document.getElementById('siteSwitcher').checked;
+            const label = document.getElementById('switchLabel');
+            if (isGoElectric) {
+                label.textContent = 'GoElectric';
+                localStorage.setItem('selectedSite', 'GoElectric');
+                window.location.href = 'index.html';
+            } else {
+                label.textContent = 'EasyGo';
+                localStorage.setItem('selectedSite', 'EasyGo');
+                window.location.href = 'easygo.html';
+            }
+        }
+
+        function applyUserPreferences() {
+            const selectedSite = localStorage.getItem('selectedSite');
+            const siteSwitcher = document.getElementById('siteSwitcher');
+            const switchLabel = document.getElementById('switchLabel');
+
+            if (selectedSite === 'GoElectric') {
+                siteSwitcher.checked = true;
+                switchLabel.textContent = 'GoElectric';
+                if (window.location.href.includes('easygo.html')) {
+                    window.location.href = 'index.html';
+                }
+            } else {
+                siteSwitcher.checked = false;
+                switchLabel.textContent = 'EasyGo';
+                if (window.location.href.includes('index.html')) {
+                    window.location.href = 'easygo.html';
+                }
+            }
+        }
 
         function initializeApp() {
             try {
@@ -325,42 +359,41 @@
         }
 
         function updateStatusCounters(scooters) {
-    let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0, easyGoCount = 0;
-    scooters.forEach(scooter => {
-        if (scooter.easyGo) easyGoCount++;
-        switch (scooter.status) {
-            case 'disponibile':
-                availableCount++;
-                break;
-            case 'rientra_oggi':
-                returnTodayCount++;
-                break;
-            case 'noleggiato':
-                rentedCount++;
-                break;
-            case 'non_disponibile':
-                outOfServiceCount++;
-                break;
-            default:
-                console.warn(`Stato sconosciuto: ${scooter.status}`);
-                break;
+            let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0, easyGoCount = 0;
+            scooters.forEach(scooter => {
+                if (scooter.easyGo) easyGoCount++;
+                switch (scooter.status) {
+                    case 'disponibile':
+                        availableCount++;
+                        break;
+                    case 'rientra_oggi':
+                        returnTodayCount++;
+                        break;
+                    case 'noleggiato':
+                        rentedCount++;
+                        break;
+                    case 'non_disponibile':
+                        outOfServiceCount++;
+                        break;
+                    default:
+                        console.warn(`Stato sconosciuto: ${scooter.status}`);
+                        break;
+                }
+            });
+
+            const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
+            if (totalScooters > 38) {
+                console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
+                toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
+                return;
+            }
+
+            document.getElementById('availableCount').textContent = availableCount;
+            document.getElementById('returnTodayCount').textContent = returnTodayCount;
+            document.getElementById('rentedCount').textContent = rentedCount;
+            document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
+            document.getElementById('easyGoCount').textContent = easyGoCount;
         }
-    });
-
-    const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
-    if (totalScooters > 38) {
-        console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
-        toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
-        return;
-    }
-
-    document.getElementById('availableCount').textContent = availableCount;
-    document.getElementById('returnTodayCount').textContent = returnTodayCount;
-    document.getElementById('rentedCount').textContent = rentedCount;
-    document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
-    document.getElementById('easyGoCount').textContent = easyGoCount;
-}
-
 
         function displayScooters(scooters) {
             const container = document.getElementById('scooterList');
@@ -639,31 +672,6 @@
             setTimeout(() => {
                 document.getElementById('pepeImage').style.display = 'none';
             }, 3000);
-        }
-
-        function switchSite() {
-            const isGoElectric = document.getElementById('siteSwitcher').checked;
-            const label = document.getElementById('switchLabel');
-            if (isGoElectric) {
-                label.textContent = 'GoElectric';
-                localStorage.setItem('selectedSite', 'GoElectric');
-                window.location.href = 'index.html';
-            } else {
-                label.textContent = 'EasyGo';
-                localStorage.setItem('selectedSite', 'EasyGo');
-                window.location.href = 'easygo.html';
-            }
-        }
-
-        function applyUserPreferences() {
-            const selectedSite = localStorage.getItem('selectedSite');
-            if (selectedSite === 'GoElectric') {
-                document.getElementById('siteSwitcher').checked = true;
-                document.getElementById('switchLabel').textContent = 'GoElectric';
-            } else {
-                document.getElementById('siteSwitcher').checked = false;
-                document.getElementById('switchLabel').textContent = 'EasyGo';
-            }
         }
     </script>
 </body>
