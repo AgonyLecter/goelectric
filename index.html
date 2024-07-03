@@ -325,41 +325,42 @@
         }
 
         function updateStatusCounters(scooters) {
-            let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0, easyGoCount = 0;
-            scooters.forEach(scooter => {
-                if (scooter.easyGo) easyGoCount++;
-                switch (scooter.status) {
-                    case 'disponibile':
-                        availableCount++;
-                        break;
-                    case 'rientra_oggi':
-                        returnTodayCount++;
-                        break;
-                    case 'noleggiato':
-                        rentedCount++;
-                        break;
-                    case 'non_disponibile':
-                        outOfServiceCount++;
-                        break;
-                    default:
-                        console.warn(`Stato sconosciuto: ${scooter.status}`);
-                        break;
-                }
-            });
-
-            const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
-            if (totalScooters > 35) {
-                console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
-                toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
-                return;
-            }
-
-            document.getElementById('availableCount').textContent = availableCount;
-            document.getElementById('returnTodayCount').textContent = returnTodayCount;
-            document.getElementById('rentedCount').textContent = rentedCount;
-            document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
-            document.getElementById('easyGoCount').textContent = easyGoCount;
+    let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0, easyGoCount = 0;
+    scooters.forEach(scooter => {
+        if (scooter.easyGo) easyGoCount++;
+        switch (scooter.status) {
+            case 'disponibile':
+                availableCount++;
+                break;
+            case 'rientra_oggi':
+                returnTodayCount++;
+                break;
+            case 'noleggiato':
+                rentedCount++;
+                break;
+            case 'non_disponibile':
+                outOfServiceCount++;
+                break;
+            default:
+                console.warn(`Stato sconosciuto: ${scooter.status}`);
+                break;
         }
+    });
+
+    const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
+    if (totalScooters > 38) {
+        console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
+        toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
+        return;
+    }
+
+    document.getElementById('availableCount').textContent = availableCount;
+    document.getElementById('returnTodayCount').textContent = returnTodayCount;
+    document.getElementById('rentedCount').textContent = rentedCount;
+    document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
+    document.getElementById('easyGoCount').textContent = easyGoCount;
+}
+
 
         function displayScooters(scooters) {
             const container = document.getElementById('scooterList');
