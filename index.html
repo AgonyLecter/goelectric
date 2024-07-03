@@ -172,10 +172,44 @@
         const dbRefScooters = firebase.database().ref('scooters');
 
         document.addEventListener('DOMContentLoaded', () => {
+            applyUserPreferences();
             initializeApp();
             registerServiceWorker();
-            applyUserPreferences();
         });
+
+        function switchSite() {
+            const isGoElectric = document.getElementById('siteSwitcher').checked;
+            const label = document.getElementById('switchLabel');
+            if (isGoElectric) {
+                label.textContent = 'GoElectric';
+                localStorage.setItem('selectedSite', 'GoElectric');
+                window.location.href = 'index.html';
+            } else {
+                label.textContent = 'EasyGo';
+                localStorage.setItem('selectedSite', 'EasyGo');
+                window.location.href = 'easygo.html';
+            }
+        }
+
+        function applyUserPreferences() {
+            const selectedSite = localStorage.getItem('selectedSite');
+            const siteSwitcher = document.getElementById('siteSwitcher');
+            const switchLabel = document.getElementById('switchLabel');
+
+            if (selectedSite === 'EasyGo') {
+                siteSwitcher.checked = false;
+                switchLabel.textContent = 'EasyGo';
+                if (window.location.href.includes('index.html')) {
+                    window.location.href = 'easygo.html';
+                }
+            } else {
+                siteSwitcher.checked = true;
+                switchLabel.textContent = 'GoElectric';
+                if (window.location.href.includes('easygo.html')) {
+                    window.location.href = 'index.html';
+                }
+            }
+        }
 
         function initializeApp() {
             try {
@@ -325,42 +359,41 @@
         }
 
         function updateStatusCounters(scooters) {
-    let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0, easyGoCount = 0;
-    scooters.forEach(scooter => {
-        if (scooter.easyGo) easyGoCount++;
-        switch (scooter.status) {
-            case 'disponibile':
-                availableCount++;
-                break;
-            case 'rientra_oggi':
-                returnTodayCount++;
-                break;
-            case 'noleggiato':
-                rentedCount++;
-                break;
-            case 'non_disponibile':
-                outOfServiceCount++;
-                break;
-            default:
-                console.warn(`Stato sconosciuto: ${scooter.status}`);
-                break;
+            let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0, easyGoCount = 0;
+            scooters.forEach(scooter => {
+                if (scooter.easyGo) easyGoCount++;
+                switch (scooter.status) {
+                    case 'disponibile':
+                        availableCount++;
+                        break;
+                    case 'rientra_oggi':
+                        returnTodayCount++;
+                        break;
+                    case 'noleggiato':
+                        rentedCount++;
+                        break;
+                    case 'non_disponibile':
+                        outOfServiceCount++;
+                        break;
+                    default:
+                        console.warn(`Stato sconosciuto: ${scooter.status}`);
+                        break;
+                }
+            });
+
+            const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
+            if (totalScooters > 38) {
+                console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
+                toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
+                return;
+            }
+
+            document.getElementById('availableCount').textContent = availableCount;
+            document.getElementById('returnTodayCount').textContent = returnTodayCount;
+            document.getElementById('rentedCount').textContent = rentedCount;
+            document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
+            document.getElementById('easyGoCount').textContent = easyGoCount;
         }
-    });
-
-    const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
-    if (totalScooters > 38) {
-        console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
-        toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
-        return;
-    }
-
-    document.getElementById('availableCount').textContent = availableCount;
-    document.getElementById('returnTodayCount').textContent = returnTodayCount;
-    document.getElementById('rentedCount').textContent = rentedCount;
-    document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
-    document.getElementById('easyGoCount').textContent = easyGoCount;
-}
-
 
         function displayScooters(scooters) {
             const container = document.getElementById('scooterList');
@@ -640,34 +673,10 @@
                 document.getElementById('pepeImage').style.display = 'none';
             }, 3000);
         }
-
-        function switchSite() {
-            const isEasyGo = document.getElementById('siteSwitcher').checked;
-            const label = document.getElementById('switchLabel');
-            if (isEasyGo) {
-                label.textContent = 'EasyGo';
-                localStorage.setItem('selectedSite', 'EasyGo');
-                window.location.href = 'easygo.html';
-            } else {
-                label.textContent = 'GoElectric';
-                localStorage.setItem('selectedSite', 'GoElectric');
-                window.location.href = 'index.html';
-            }
-        }
-
-        function applyUserPreferences() {
-            const selectedSite = localStorage.getItem('selectedSite');
-            if (selectedSite === 'EasyGo') {
-                document.getElementById('siteSwitcher').checked = true;
-                document.getElementById('switchLabel').textContent = 'EasyGo';
-            } else {
-                document.getElementById('siteSwitcher').checked = false;
-                document.getElementById('switchLabel').textContent = 'GoElectric';
-            }
-        }
     </script>
 </body>
 </html>
+
 
 
 
