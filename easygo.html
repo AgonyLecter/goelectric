@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    <link rel="icon" href="logo.ico">
+    <link rel="icon" href="logoeasy.ico">
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -54,10 +54,11 @@
         .btn-primary:hover, .btn-info:hover, .btn-secondary:hover, .btn-warning:hover {
             transform: scale(1.05);
         }
-        .btn-success { background-color: #28a745; }
+        .btn-success { background-color: #00BFFF; } /* Colore invertito */
         .return-today { background-color: #ffc107; }
         .btn-danger { background-color: #dc3545; }
         .out-of-service { background-color: #6c757d; }
+        .easy-go { background-color: #28a745; } /* Colore invertito */
         .modal-content { font-family: 'Roboto', sans-serif; }
         .status-counter {
             display: flex;
@@ -107,13 +108,23 @@
             background-color: #dc3545;
             color: #fff;
         }
+        #pepeImage {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: auto;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
     <div class="container d-flex flex-column align-items-center">
-        <img src="logo.png" class="logo mb-3" alt="EasyGo Logo">
+        <img src="logoeasy.ico" class="logo mb-3" alt="EasyGo Logo">
         <div id="navMenu" class="mb-3 d-flex justify-content-center">
-            <a href="reservations.html" class="btn btn-primary">Prenotazioni</a>
+            <a href="reservations.html" class="btn btn-primary">Reservations</a>
             <button class="btn btn-info" id="sortByReturnButton" onclick="toggleView()">Ordina per Rientri</button>
         </div>
         <div class="form-check form-switch">
@@ -127,13 +138,14 @@
             <p>Rientro: <span id="returnTodayCount">0</span></p>
             <p>Noleggiati: <span id="rentedCount">0</span></p>
             <p>NonDisp: <span id="outOfServiceCount">0</span></p>
+            <p>GE: <span id="easyGoCount">0</span></p>
         </div>
         <ul id="todayReservationsList" class="list-group w-100"></ul>
         <div id="scooterList" class="w-100 row"></div>
         <div id="footer"> &reg;Licenza Unica EasyGo </div>
+        <img id="pepeImage" src="pepe.png" alt="Pepe Image">
     </div>
 
-    <!-- Script JS e Firebase -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.0.0/firebase-app.js"></script>
@@ -145,14 +157,14 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "YOUR_EASYGO_API_KEY",
-            authDomain: "your-easygo-app.firebaseapp.com",
-            databaseURL: "https://your-easygo-app.firebaseio.com",
-            projectId: "your-easygo-app",
-            storageBucket: "your-easygo-app.appspot.com",
-            messagingSenderId: "YOUR_EASYGO_SENDER_ID",
-            appId: "YOUR_EASYGO_APP_ID",
-            measurementId: "YOUR_EASYGO_MEASUREMENT_ID"
+            apiKey: "AIzaSyAXkaxi5ZWr3pzr3C_0BpwCrL_7y0tC_t8",
+    authDomain: "easygo-f5046.firebaseapp.com",
+    databaseURL: "https://easygo-f5046-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "easygo-f5046",
+    storageBucket: "easygo-f5046.appspot.com",
+    messagingSenderId: "509243295842",
+    appId: "1:509243295842:web:3d3c7f60166d497480293b",
+    measurementId: "G-WFMBB2JEDD"
         };
         firebase.initializeApp(firebaseConfig);
 
@@ -313,39 +325,42 @@
         }
 
         function updateStatusCounters(scooters) {
-            let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0;
-            scooters.forEach(scooter => {
-                switch (scooter.status) {
-                    case 'disponibile':
-                        availableCount++;
-                        break;
-                    case 'rientra_oggi':
-                        returnTodayCount++;
-                        break;
-                    case 'noleggiato':
-                        rentedCount++;
-                        break;
-                    case 'non_disponibile':
-                        outOfServiceCount++;
-                        break;
-                    default:
-                        console.warn(`Stato sconosciuto: ${scooter.status}`);
-                        break;
-                }
-            });
-
-            const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
-            if (totalScooters > 35) {
-                console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
-                toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
-                return;
-            }
-
-            document.getElementById('availableCount').textContent = availableCount;
-            document.getElementById('returnTodayCount').textContent = returnTodayCount;
-            document.getElementById('rentedCount').textContent = rentedCount;
-            document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
+    let availableCount = 0, returnTodayCount = 0, rentedCount = 0, outOfServiceCount = 0, easyGoCount = 0;
+    scooters.forEach(scooter => {
+        if (scooter.easyGo) easyGoCount++;
+        switch (scooter.status) {
+            case 'disponibile':
+                availableCount++;
+                break;
+            case 'rientra_oggi':
+                returnTodayCount++;
+                break;
+            case 'noleggiato':
+                rentedCount++;
+                break;
+            case 'non_disponibile':
+                outOfServiceCount++;
+                break;
+            default:
+                console.warn(`Stato sconosciuto: ${scooter.status}`);
+                break;
         }
+    });
+
+    const totalScooters = availableCount + returnTodayCount + rentedCount + outOfServiceCount;
+    if (totalScooters > 38) {
+        console.error("Inconsistenza nei dati: numero totale di scooter supera il limite.");
+        toastr.error('Errore: Il numero totale di scooter supera il limite previsto.');
+        return;
+    }
+
+    document.getElementById('availableCount').textContent = availableCount;
+    document.getElementById('returnTodayCount').textContent = returnTodayCount;
+    document.getElementById('rentedCount').textContent = rentedCount;
+    document.getElementById('outOfServiceCount').textContent = outOfServiceCount;
+    document.getElementById('easyGoCount').textContent = easyGoCount;
+}
+
 
         function displayScooters(scooters) {
             const container = document.getElementById('scooterList');
@@ -370,7 +385,10 @@
             if (scooter.hotelName) {
                 buttonText += ` - Hotel: ${scooter.hotelName}`;
             }
-            scooterButton.className = `btn ${getButtonClass(scooter.status)} scooter-btn`;
+            if (scooter.easyGo) {
+                buttonText += ' (GE)';
+            }
+            scooterButton.className = `btn ${getButtonClass(scooter.status, scooter.easyGo)} scooter-btn`;
             scooterButton.textContent = buttonText;
             scooterButton.onclick = (event) => {
                 event.preventDefault();
@@ -405,6 +423,10 @@
                         <input type="checkbox" id="pickUp">
                         <label for="pickUp">Pick Up</label>
                     </div>
+                    <div class="swal2-checkbox">
+                        <input type="checkbox" id="easyGo">
+                        <label for="easyGo">GoElectric</label>
+                    </div>
                     <button type="button" id="unlockScooterButton" class="swal2-confirm swal2-styled" style="background-color: #17a2b8;">Sblocca Scooter</button>
                 `,
                 showCancelButton: true,
@@ -421,6 +443,7 @@
                     document.getElementById('hotelName').value = scooter.hotelName || '';
                     document.getElementById('outOfService').checked = scooter.status === 'non_disponibile';
                     document.getElementById('pickUp').checked = scooter.pickUp || false;
+                    document.getElementById('easyGo').checked = scooter.easyGo || false;
                     document.getElementById('pickUp').addEventListener('change', (event) => {
                         document.getElementById('hotelNameContainer').style.display = event.target.checked ? 'block' : 'none';
                     });
@@ -443,6 +466,7 @@
                     const hotelName = document.getElementById('pickUp').checked ? document.getElementById('hotelName').value : null;
                     const outOfService = document.getElementById('outOfService').checked;
                     const pickUp = document.getElementById('pickUp').checked;
+                    const easyGo = document.getElementById('easyGo').checked;
 
                     if (outOfService && (returnDate || returnTime)) {
                         Swal.showValidationMessage('Per favore, deseleziona "Non disponibile" per impostare una data di rientro e un orario.');
@@ -459,7 +483,8 @@
                     const updateObj = {
                         status: newStatus,
                         pickUp: pickUp,
-                        hotelName: hotelName
+                        hotelName: hotelName,
+                        easyGo: easyGo
                     };
 
                     if (newStatus === 'noleggiato' || newStatus === 'rientra_oggi') {
@@ -521,7 +546,8 @@
                 returnDate: null,
                 returnTime: null,
                 pickUp: false,
-                hotelName: null
+                hotelName: null,
+                // Mantenere il flag EasyGo
             }).then(() => {
                 Swal.fire({
                     icon: 'success',
@@ -547,7 +573,10 @@
             }
         }
 
-        function getButtonClass(status) {
+        function getButtonClass(status, easyGo) {
+            if (easyGo && status === 'disponibile') {
+                return 'easy-go';
+            }
             switch (status) {
                 case 'disponibile': return 'btn-success';
                 case 'rientra_oggi': return 'return-today';
@@ -613,27 +642,27 @@
         }
 
         function switchSite() {
-            const isEasyGo = document.getElementById('siteSwitcher').checked;
+            const isGoElectric = document.getElementById('siteSwitcher').checked;
             const label = document.getElementById('switchLabel');
-            if (isEasyGo) {
-                label.textContent = 'EasyGo';
-                localStorage.setItem('selectedSite', 'EasyGo');
-                window.location.href = 'easygo.html';
-            } else {
+            if (isGoElectric) {
                 label.textContent = 'GoElectric';
                 localStorage.setItem('selectedSite', 'GoElectric');
                 window.location.href = 'index.html';
+            } else {
+                label.textContent = 'EasyGo';
+                localStorage.setItem('selectedSite', 'EasyGo');
+                window.location.href = 'easygo.html';
             }
         }
 
         function applyUserPreferences() {
             const selectedSite = localStorage.getItem('selectedSite');
-            if (selectedSite === 'EasyGo') {
+            if (selectedSite === 'GoElectric') {
                 document.getElementById('siteSwitcher').checked = true;
-                document.getElementById('switchLabel').textContent = 'EasyGo';
+                document.getElementById('switchLabel').textContent = 'GoElectric';
             } else {
                 document.getElementById('siteSwitcher').checked = false;
-                document.getElementById('switchLabel').textContent = 'GoElectric';
+                document.getElementById('switchLabel').textContent = 'EasyGo';
             }
         }
     </script>
